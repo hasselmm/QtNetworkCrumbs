@@ -1,6 +1,22 @@
 #include <QCoreApplication>
 #include <QTcpServer>
 #include <QTcpSocket>
+#include <QtEndian>
+
+#include <zlib.h>
+
+namespace {
+
+constexpr quint8 s_gzipHeader[] = {
+    0x1f, 0x8b,                 // id
+    0x08,                       // compression method (deflate)
+    0x00,                       // flags
+    0x00, 0x00, 0x00, 0x00,     // mtime
+    0x00,                       // extra flags
+    0xff,                       // operating system (unknown)
+};
+
+}
 
 class CompressingServer : public QCoreApplication
 {
@@ -30,11 +46,18 @@ int CompressingServer::run()
                 auto compressed = qCompress(content);
 
                 if (gzip) {
-                    compressed = QByteArray::fromHex("1f8b 08 00 00000000 00 ff")
-                            + compressed.mid(6, compressed.length() - 10)
-                            + QByteArray::fromHex("efd37ef7 19000000");
+                    QByteArray trailer{8, Qt::Uninitialized};
+                    const auto checksum = crc32(0, reinterpret_cast<const quint8 *>(content.constData()), content.length());
+
+                    qToLittleEndian<quint32>(checksum, trailer.data());
+                    qToLittleEndian<quint32>(content.length(), trailer.data() + 4);
+
+                    compressed
+                            = QByteArray::fromRawData(reinterpret_cast<const char *>(s_gzipHeader), sizeof s_gzipHeader)
+                            + compressed.mid(6, compressed.length() - 10) // strip size, zlib header and trailer
+                            + trailer;
                 } else {
-                    compressed = compressed.mid(4);
+                    compressed = compressed.mid(4); // strip size
                 }
 
                 client->write("HTTP/1.0 200 OK\r\n");
