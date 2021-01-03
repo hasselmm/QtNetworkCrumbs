@@ -35,6 +35,10 @@ else()
     message(STATUS "Using Zlib bundled with Qt ${Qt5_VERSION}")
 endif()
 
+add_subdirectory(.github)
 add_subdirectory(http)
 add_subdirectory(mdns)
-add_subdirectory(tests)
+
+if (NOT IOS) # FIXME Figure out code signing on Github
+    add_subdirectory(tests)
+endif()

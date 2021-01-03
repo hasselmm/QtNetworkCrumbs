@@ -1,0 +1,104 @@
+name: Continuous Integration
+on: [push]
+
+jobs:
+  build:
+    runs-on: ${{matrix.os}}
+
+    strategy:
+      matrix:
+        os: [macos-10.15, ubuntu-18.04, windows-2019]
+        target: [desktop]
+        config: [Release]
+        tools: ['']
+        arch: ['']
+
+        include:
+          - os: macos-10.15
+            target: ios
+            config: Release
+            cmake-flags: [
+                '-DCMAKE_FIND_ROOT_PATH:PATH=$Qt5_DIR',
+                '-DCMAKE_PREFIX_PATH:STRING=$Qt5_DIR',
+                '-DCMAKE_SYSTEM_NAME:STRING=iOS',
+                '-GXcode',
+            ]
+
+          - os: ubuntu-18.04
+            target: android
+            config: Release
+            cmake-flags: [
+                '-DANDROID_SDK:PATH=$ANDROID_SDK_ROOT',
+                '-DANDROID_NDK:PATH=$ANDROID_SDK_ROOT/ndk-bundle',
+                '-DCMAKE_TOOLCHAIN_FILE:PATH=$ANDROID_SDK_ROOT/ndk-bundle/build/cmake/android.toolchain.cmake',
+                '-DCMAKE_C_COMPILER:FILEPATH=$ANDROID_SDK_ROOT/ndk-bundle/toolchains/llvm/prebuilt/linux-x86_64/bin/clang',
+                '-DCMAKE_CXX_COMPILER:FILEPATH=$ANDROID_SDK_ROOT/ndk-bundle/toolchains/llvm/prebuilt/linux-x86_64/bin/clang',
+                '-DCMAKE_FIND_ROOT_PATH:PATH=$Qt5_DIR',
+                '-DCMAKE_PREFIX_PATH:STRING=$Qt5_DIR',
+                '-DANDROID_ABI:STRING=armeabi-v7a',
+                '-DANDROID_STL:STRING=c++_shared',
+                '-DANDROID_NATIVE_API_LEVEL:STRING=16',
+                '-GNinja',
+            ]
+            tools: 'tools_ninja,1.10.0,qt.tools.ninja'
+
+          - os: windows-2019
+            target: desktop
+            arch: win64_mingw81
+            config: Release
+            cmake-flags: [
+              '-DCMAKE_C_COMPILER:FILEPATH=D:/a/QtNetworkCrumbs/Qt/Tools/mingw810_64/bin/gcc.exe',
+              '-DCMAKE_CXX_COMPILER:FILEPATH=D:/a/QtNetworkCrumbs/Qt/Tools/mingw810_64/bin/g++.exe',
+              '-GNinja',
+            ]
+            tools: 'tools_ninja,1.10.0,qt.tools.ninja tools_mingw,8.1.0,qt.tools.win64_mingw810'
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Cache Qt
+        id: cache-qt
+        uses: actions/cache@v1
+        with:
+          path: ../Qt
+          key: qt5-${{matrix.os}}-${{matrix.target}}-${{matrix.arch || 'default'}}${{contains(matrix.tools, 'ninja') && '-ninja' || ''}}
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v2
+        with:
+          version: '5.15.2'
+          target: ${{matrix.target}}
+          arch: ${{matrix.arch}}
+          tools: ${{matrix.tools}}
+          cached: ${{steps.cache-qt.outputs.cache-hit}}
+
+      - name: Enable Qt Tools
+        uses: ./.github/actions/enable-qt-tools
+        with:
+          tools: ${{matrix.tools}}
+
+      - name: Prepare
+        run: |
+          cmake -E make_directory ${{runner.workspace}}/build
+          cmake -E environment
+
+      - name: Configure
+        working-directory: ${{runner.workspace}}/build
+        run: cmake ${{github.workspace}} -DCMAKE_BUILD_TYPE:STRING=${{matrix.config}} ${{join(matrix.cmake-flags, ' ')}}
+
+      - name: Build
+        working-directory: ${{runner.workspace}}/build
+        run: cmake --build . --config ${{matrix.config}}
+
+      - name: Test
+        if: matrix.target == 'desktop'
+        working-directory: ${{runner.workspace}}/build
+        run: ctest -C ${{matrix.config}}
+
+      - uses: actions/upload-artifact@v2
+        if: failure()
+        with:
+          name: CMake Artifacts
+          path: |
+            ${{runner.workspace}}/build/CMakeCache.txt
+            ${{runner.workspace}}/build/CMakeFiles/CMakeOutput.log
