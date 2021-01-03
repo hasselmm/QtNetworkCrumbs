@@ -32,3 +32,4 @@ endif()
 
 add_subdirectory(http)
 add_subdirectory(mdns)
+add_subdirectory(tests)
