@@ -1,14 +1,17 @@
-project(QtNetworkCrumbs)
 cmake_minimum_required(VERSION 3.10)
-set(CMAKE_CXX_STANDARD 14)
+project(QtNetworkCrumbs)
+
+set(CMAKE_CXX_STANDARD 17)
 enable_language(CXX)
 
-find_package(Qt5 REQUIRED COMPONENTS Network)
+set(CMAKE_AUTOMOC ON)
+set(CMAKE_AUTORCC ON)
+set(CMAKE_AUTOUIC ON)
+
+find_package(Qt5 REQUIRED COMPONENTS Network Test)
 find_package(Qt5 QUIET COMPONENTS Zlib)
 
-if (TARGET Qt5::Zlib)
-    add_library(ZLIB::ZLIB ALIAS Qt5::Zlib)
-else()
+if (NOT TARGET Qt5::Zlib)
     foreach (dir IN LISTS CMAKE_CXX_IMPLICIT_INCLUDE_DIRECTORIES)
         if (EXISTS "${dir}/zlib.h")
             set(ZLIB_INCLUDE_DIR "${dir}")
@@ -24,10 +27,8 @@ else()
     endforeach()
 
     find_package(ZLIB)
+    add_library(Qt5::Zlib ALIAS ZLIB::ZLIB)
 endif()
 
-add_executable(HttpCompressingServer http/compressingserver.cpp)
-target_link_libraries(HttpCompressingServer PUBLIC Qt5::Network ZLIB::ZLIB)
-
-add_executable(MDnsServiceDiscovery mdns/servicediscovery.cpp)
-target_link_libraries(MDnsServiceDiscovery PUBLIC Qt5::Network)
+add_subdirectory(http)
+add_subdirectory(mdns)
