@@ -1,4 +1,4 @@
-add_library(MDNSResolver SHARED)
+add_library(MDNSResolver STATIC)
 target_include_directories(MDNSResolver PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_sources(MDNSResolver PRIVATE mdnsmessage.cpp mdnsmessage.h)
 target_link_libraries(MDNSResolver PUBLIC Qt5::Network)
