@@ -8,6 +8,6 @@ target_link_libraries(MDNSResolverDemo PRIVATE MDNSResolver)
 
 if (WIN32)
     add_executable(WinDNSTest windnstest.cpp)
-    target_link_libraries(WinDNSTest -ldnsapi)
+    target_compile_definitions(WinDNSTest PRIVATE -DWINAPI_FAMILY=WINAPI_FAMILY_DESKTOP_APP)
+    target_link_libraries(WinDNSTest dnsapi.lib)
 endif()
-
