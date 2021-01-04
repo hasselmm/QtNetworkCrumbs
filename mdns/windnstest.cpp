@@ -6,6 +6,8 @@
 #include <iostream>
 #include <iomanip>
 
+#ifndef DNS_QUERY_REQUEST_VERSION1
+
 #define DNS_QUERY_REQUEST_VERSION1 (1)
 #define DNS_QUERY_REQUEST_VERSION2 (2)
 #define DNS_REQUEST_PENDING              9506L
@@ -43,7 +45,9 @@ typedef struct _DNS_SERVICE_CANCEL {
 
 DNS_STATUS DnsServiceBrowse(PDNS_SERVICE_BROWSE_REQUEST pRequest, PDNS_SERVICE_CANCEL pCancel);
 
-}
+} // extern "C"
+
+#endif // DNS_QUERY_REQUEST_VERSION1
 
 void onBrowseComplete(DWORD status, PVOID pQueryContext, PDNS_RECORD pDnsRecord)
 {

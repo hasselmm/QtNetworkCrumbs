@@ -370,6 +370,13 @@ QDebug operator<<(QDebug debug, const MDNS::Resource &resource)
     case MDNS::Message::SRV:
         debug << ", service=" << resource.service();
         break;
+
+    case MDNS::Message::ANY:
+    case MDNS::Message::CNAME:
+    case MDNS::Message::NSEC:
+    case MDNS::Message::MX:
+    case MDNS::Message::NS:
+        break;
     }
 
     if (debug.verbosity() > QDebug::DefaultVerbosity)
