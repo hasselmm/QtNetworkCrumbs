@@ -5,6 +5,10 @@ enable_testing()
 set(CMAKE_CXX_STANDARD 17)
 enable_language(CXX)
 
+if (CMAKE_CXX_COMPILER_ID MATCHES GNU|Clang)
+    string(APPEND CMAKE_CXX_FLAGS " -Wall -Wextra -Werror=conversion -Werror=reorder -Werror=switch -Werror=unused")
+endif()
+
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)

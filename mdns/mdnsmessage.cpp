@@ -9,8 +9,6 @@ namespace MDNS {
 
 namespace {
 
-Q_LOGGING_CATEGORY(lcMessage, "mdns.message")
-
 auto readUInt16(const char *p)
 {
     return qFromBigEndian<quint16>(p);
@@ -138,7 +136,7 @@ Question::Question(QByteArray name, Message::Type type, Message::NetworkClass ne
     : Entry{Name{name.split('.')}.data() + QByteArray{4, Qt::Uninitialized}, 0}
 {
     setU16(fieldsOffset() + TypeOffset, type);
-    setU16(fieldsOffset() + FlagsOffset, (networkClass & 0x7f) | (flush ? 0x80 : 0x00));
+    setU16(fieldsOffset() + FlagsOffset, static_cast<quint16>((networkClass & 0x7fU) | (flush ? 0x80U : 0x00U)));
 }
 
 QHostAddress Resource::address() const
@@ -247,9 +245,10 @@ Message &Message::addQuestion(Question question)
     Q_ASSERT(answerCount() == 0);
     Q_ASSERT(authorityCount() == 0);
     Q_ASSERT(additionalCount() == 0);
+    Q_ASSERT(questionCount() < 0xffff);
 
     m_data.append(question.data());
-    setU16(QuestionCountOffset, questionCount() + 1);
+    setU16(QuestionCountOffset, static_cast<quint16>(questionCount() + 1));
 
     return *this;
 }

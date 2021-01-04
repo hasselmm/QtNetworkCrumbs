@@ -23,15 +23,15 @@ public:
     auto data() const { return m_data; }
 
 protected:
-    quint8 u8(int offset) const { return m_data.at(offset); }
+    quint8 u8(int offset) const { return static_cast<quint8>(m_data.at(offset)); }
     quint16 u16(int offset) const;
     quint32 u32(int offset) const;
 
     void setU16(int offset, quint16 value);
 
 private:
-    int m_offset = 0;
     QByteArray m_data;
+    int m_offset = 0;
 };
 
 class Message
