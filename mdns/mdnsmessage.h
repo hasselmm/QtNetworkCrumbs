@@ -1,3 +1,6 @@
+/* QtNetworkCrumbs - Some networking toys for Qt
+ * Copyright (C) 2019-2021 Mathias Hasselmann
+ */
 #ifndef MDNS_MDNSMESSAGE_H
 #define MDNS_MDNSMESSAGE_H
 
@@ -20,6 +23,8 @@ public:
     explicit Entry(QByteArray data, int offset);
 
     int offset() const { return m_offset; }
+    bool isEmpty() const { return m_data.isEmpty(); }
+    bool isNull() const { return m_data.isNull(); }
     auto data() const { return m_data; }
 
 protected:
@@ -119,6 +124,7 @@ public:
     int answerCount() const { return u16(AnswerCountOffset); }
     int authorityCount() const { return u16(AuthorityCountOffset); }
     int additionalCount() const { return u16(AdditionalCountOffset); }
+    int responseCount() const { return answerCount() + authorityCount() + additionalCount(); }
 
     bool isQuery() const { return !flags().testFlag(Flag::IsResponse); }
     bool isResponse() const { return flags().testFlag(Flag::IsResponse); }
@@ -129,6 +135,7 @@ public:
     Resource answer(int i) const;
     Resource authority(int i) const;
     Resource additional(int i) const;
+    Resource response(int i) const;
 
     Message &addQuestion(Question question);
     Message &addAnswer(Resource resource);
@@ -153,7 +160,7 @@ public:
 
     bool isLabel() const { return (u8(offset()) & 0xc0) == 0x00; }
     int labelLength() const { return isLabel() ? u8(offset()) : 0; }
-    QByteArray labelText() const;
+    QByteArray toByteArray() const;
 
     bool isPointer() const { return (u8(offset()) & 0xc0) == 0xc0; }
     int pointer() const { return u16(offset()) & 0x3fff; }

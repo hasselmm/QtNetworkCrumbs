@@ -1,6 +1,11 @@
-add_library(MDNSResolver STATIC)
+add_library(MDNSResolver STATIC
+    mdnsmessage.cpp
+    mdnsmessage.h
+    mdnsresolver.cpp
+    mdnsresolver.h
+    )
+
 target_include_directories(MDNSResolver PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
-target_sources(MDNSResolver PRIVATE mdnsmessage.cpp mdnsmessage.h)
 target_link_libraries(MDNSResolver PUBLIC Qt5::Network)
 
 target_compile_definitions(MDNSResolver PRIVATE
@@ -10,7 +15,7 @@ target_compile_definitions(MDNSResolver PRIVATE
     )
 
 if (NOT IOS) # FIXME Figure out code signing on Github
-    add_executable(MDNSResolverDemo servicediscovery.cpp)
+    add_executable(MDNSResolverDemo mdnsresolverdemo.cpp)
     target_link_libraries(MDNSResolverDemo PRIVATE MDNSResolver)
 
     set_target_properties(MDNSResolverDemo PROPERTIES

@@ -1,3 +1,6 @@
+/* QtNetworkCrumbs - Some networking toys for Qt
+ * Copyright (C) 2019-2021 Mathias Hasselmann
+ */
 #include "mdnsmessage.h"
 
 #include <QHostAddress>
@@ -71,7 +74,7 @@ quint32 Entry::u32(int offset) const
     return readUInt32(m_data.constData() + offset);
 }
 
-QByteArray Label::labelText() const
+QByteArray Label::toByteArray() const
 {
     return data().mid(offset() + 1, labelLength());
 }
@@ -105,7 +108,7 @@ QByteArray Name::toByteArray() const
         if (l.labelLength() == 0)
             break;
 
-        name.append(l.labelText());
+        name.append(l.toByteArray());
         name.append('.');
     }
 
@@ -238,6 +241,27 @@ Resource Message::additional(int i) const
     } else {
         return Resource{};
     }
+}
+
+Resource Message::response(int i) const
+{
+    if (i < 0)
+        return response(responseCount() - 1);
+
+    if (i < answerCount())
+        return answer(i);
+
+    i -= answerCount();
+
+    if (i < authorityCount())
+        return authority(i);
+
+    i -= authorityCount();
+
+    if (i < additionalCount())
+        return additional(i);
+
+    return {};
 }
 
 Message &Message::addQuestion(Question question)
@@ -400,3 +424,5 @@ QDebug operator<<(QDebug debug, const MDNS::ServiceRecord &service)
             << ", target=" << service.target()
             << ")";
 }
+
+#include "moc_mdnsmessage.cpp"
