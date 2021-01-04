@@ -47,10 +47,11 @@ int CompressingServer::run()
 
                 if (gzip) {
                     QByteArray trailer{8, Qt::Uninitialized};
-                    const auto checksum = crc32(0, reinterpret_cast<const quint8 *>(content.constData()), content.length());
+                    const auto length = static_cast<uint>(content.length());
+                    const auto checksum = crc32(0, reinterpret_cast<const quint8 *>(content.constData()), length);
 
-                    qToLittleEndian<quint32>(checksum, trailer.data());
-                    qToLittleEndian<quint32>(content.length(), trailer.data() + 4);
+                    qToLittleEndian(static_cast<quint32>(checksum), trailer.data());
+                    qToLittleEndian(static_cast<quint32>(length), trailer.data() + 4);
 
                     compressed
                             = QByteArray::fromRawData(reinterpret_cast<const char *>(s_gzipHeader), sizeof s_gzipHeader)

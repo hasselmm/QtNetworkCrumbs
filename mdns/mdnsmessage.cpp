@@ -1,3 +1,6 @@
+/* QtNetworkCrumbs - Some networking toys for Qt
+ * Copyright (C) 2019-2021 Mathias Hasselmann
+ */
 #include "mdnsmessage.h"
 
 #include <QHostAddress>
@@ -8,8 +11,6 @@
 namespace MDNS {
 
 namespace {
-
-Q_LOGGING_CATEGORY(lcMessage, "mdns.message")
 
 auto readUInt16(const char *p)
 {
@@ -73,7 +74,7 @@ quint32 Entry::u32(int offset) const
     return readUInt32(m_data.constData() + offset);
 }
 
-QByteArray Label::labelText() const
+QByteArray Label::toByteArray() const
 {
     return data().mid(offset() + 1, labelLength());
 }
@@ -107,7 +108,7 @@ QByteArray Name::toByteArray() const
         if (l.labelLength() == 0)
             break;
 
-        name.append(l.labelText());
+        name.append(l.toByteArray());
         name.append('.');
     }
 
@@ -138,7 +139,7 @@ Question::Question(QByteArray name, Message::Type type, Message::NetworkClass ne
     : Entry{Name{name.split('.')}.data() + QByteArray{4, Qt::Uninitialized}, 0}
 {
     setU16(fieldsOffset() + TypeOffset, type);
-    setU16(fieldsOffset() + FlagsOffset, (networkClass & 0x7f) | (flush ? 0x80 : 0x00));
+    setU16(fieldsOffset() + FlagsOffset, static_cast<quint16>((networkClass & 0x7fU) | (flush ? 0x80U : 0x00U)));
 }
 
 QHostAddress Resource::address() const
@@ -242,14 +243,36 @@ Resource Message::additional(int i) const
     }
 }
 
+Resource Message::response(int i) const
+{
+    if (i < 0)
+        return response(responseCount() - 1);
+
+    if (i < answerCount())
+        return answer(i);
+
+    i -= answerCount();
+
+    if (i < authorityCount())
+        return authority(i);
+
+    i -= authorityCount();
+
+    if (i < additionalCount())
+        return additional(i);
+
+    return {};
+}
+
 Message &Message::addQuestion(Question question)
 {
     Q_ASSERT(answerCount() == 0);
     Q_ASSERT(authorityCount() == 0);
     Q_ASSERT(additionalCount() == 0);
+    Q_ASSERT(questionCount() < 0xffff);
 
     m_data.append(question.data());
-    setU16(QuestionCountOffset, questionCount() + 1);
+    setU16(QuestionCountOffset, static_cast<quint16>(questionCount() + 1));
 
     return *this;
 }
@@ -376,6 +399,7 @@ QDebug operator<<(QDebug debug, const MDNS::Resource &resource)
     case MDNS::Message::NSEC:
     case MDNS::Message::MX:
     case MDNS::Message::NS:
+    case MDNS::Message::OPT:
         break;
     }
 
@@ -400,3 +424,5 @@ QDebug operator<<(QDebug debug, const MDNS::ServiceRecord &service)
             << ", target=" << service.target()
             << ")";
 }
+
+#include "moc_mdnsmessage.cpp"
