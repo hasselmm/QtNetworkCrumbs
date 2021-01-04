@@ -39,6 +39,8 @@ else()
     message(STATUS "Using Zlib bundled with Qt ${Qt5_VERSION}")
 endif()
 
+add_custom_target(metadata SOURCES LICENSE README.md)
+
 add_subdirectory(.github)
 add_subdirectory(http)
 add_subdirectory(mdns)
