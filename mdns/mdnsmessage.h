@@ -58,6 +58,7 @@ public:
         NSEC = 47,
         MX = 15,
         NS = 2,
+        OPT = 41,
         PTR = 12,
         SRV = 33,
         TXT = 16,

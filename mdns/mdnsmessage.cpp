@@ -375,6 +375,7 @@ QDebug operator<<(QDebug debug, const MDNS::Resource &resource)
     case MDNS::Message::NSEC:
     case MDNS::Message::MX:
     case MDNS::Message::NS:
+    case MDNS::Message::OPT:
         break;
     }
 
