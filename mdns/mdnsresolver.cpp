@@ -3,8 +3,10 @@
  */
 #include "mdnsresolver.h"
 
+// MDNS headers
 #include "mdnsmessage.h"
 
+// Qt headers
 #include <QHostAddress>
 #include <QLoggingCategory>
 #include <QNetworkDatagram>
@@ -12,6 +14,7 @@
 #include <QTimer>
 #include <QUdpSocket>
 
+// STL headers
 #include <unordered_map>
 
 namespace MDNS {
@@ -51,8 +54,10 @@ auto normalizedHostName(QByteArray name, QString domain)
 
 auto qualifiedHostName(QString name, QString domain)
 {
-    if (!name.endsWith('.'))
-        return name + '.' + domain;
+    if (name.endsWith('.'))
+        name.truncate(name.length() - 1);
+    else if (const auto domainSuffix = '.' + domain; !name.endsWith(domainSuffix))
+        name.append(domainSuffix);
 
     return name;
 }
@@ -79,14 +84,9 @@ Resolver::Resolver(QObject *parent)
     , m_domain{"local"}
 {
     createSockets();
-    connect(m_timer, &QTimer::timeout, this, &Resolver::onTimeout);
+    m_timer->callOnTimeout(this, &Resolver::onTimeout);
     QTimer::singleShot(0, this, &Resolver::onTimeout);
     m_timer->start(2s);
-}
-
-QString Resolver::domain() const
-{
-    return m_domain;
 }
 
 void Resolver::setDomain(QString domain)
@@ -95,7 +95,38 @@ void Resolver::setDomain(QString domain)
         emit domainChanged(m_domain);
 }
 
-void Resolver::lookupHostNames(QStringList hostNames)
+QString Resolver::domain() const
+{
+    return m_domain;
+}
+
+void Resolver::setInterval(std::chrono::milliseconds ms)
+{
+    if (intervalAsDuration() != ms) {
+        m_timer->setInterval(ms);
+        emit intervalChanged(interval());
+    }
+}
+
+void Resolver::setInterval(int ms)
+{
+    if (interval() != ms) {
+        m_timer->setInterval(ms);
+        emit intervalChanged(interval());
+    }
+}
+
+std::chrono::milliseconds Resolver::intervalAsDuration() const
+{
+    return m_timer->intervalAsDuration();
+}
+
+int Resolver::interval() const
+{
+    return m_timer->interval();
+}
+
+bool Resolver::lookupHostNames(QStringList hostNames)
 {
     MDNS::Message message;
 
@@ -104,23 +135,27 @@ void Resolver::lookupHostNames(QStringList hostNames)
         message.addQuestion({qualifiedHostName(name, m_domain).toLatin1(), MDNS::Message::AAAA});
     }
 
-    lookup(message);
+    return lookup(message);
 }
 
-void Resolver::lookupServices(QStringList serviceTypes)
+bool Resolver::lookupServices(QStringList serviceTypes)
 {
     MDNS::Message message;
 
     for (const auto &type: serviceTypes)
-        message.addQuestion({(type + m_domain).toLatin1(), MDNS::Message::PTR});
+        message.addQuestion({qualifiedHostName(type, m_domain).toLatin1(), MDNS::Message::PTR});
 
-    lookup(message);
+    return lookup(message);
 }
 
-void Resolver::lookup(Message query)
+bool Resolver::lookup(Message query)
 {
-    if (const auto data = query.data(); !m_queries.contains(data))
+    if (const auto data = query.data(); !m_queries.contains(data)) {
         m_queries.append(std::move(data));
+        return true;
+    }
+
+    return false;
 }
 
 bool Resolver::isOwnMessage(QNetworkDatagram message) const

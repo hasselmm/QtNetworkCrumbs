@@ -158,6 +158,9 @@ public:
         class ConstIterator
         {
         public:
+            using iterator_category = std::forward_iterator_tag;
+            using difference_type = int;
+
             using pointer = T*;
             using reference = T&;
             using value_type = T;
@@ -181,10 +184,11 @@ public:
             : message{message}, lookup{lookup}, count{count} {}
 
         ConstIterator begin() const { return {this, 0}; }
-        ConstIterator end() const { return {this, (message->*count)()}; }
+        ConstIterator end() const { return {this, size()}; }
 
         value_type at(int index) const { return (message->*lookup)(index); }
         value_type operator[](int index) const { return at(index); }
+        auto size() const { return (message->*count)(); }
 
     private:
         const Message *message = {};
@@ -228,12 +232,49 @@ class Name : public Entry
     Q_GADGET
 
 public:
+    using pointer = Label*;
+    using reference = Label&;
+    using value_type = Label;
+
+    class ConstIterator
+    {
+    public:
+        using iterator_category = std::forward_iterator_tag;
+        using difference_type = int;
+
+        using pointer = Label*;
+        using reference = Label&;
+        using value_type = Label;
+
+        ConstIterator() noexcept = default;
+        constexpr ConstIterator(const Name *name, int index) noexcept
+            : name{name}, index{index} {}
+
+        constexpr bool operator==(const ConstIterator &rhs) const { return std::tie(name, index) == std::tie(rhs.name, rhs.index); }
+        constexpr bool operator!=(const ConstIterator &rhs) const { return !operator==(rhs); }
+        value_type operator*() const { return name->label(index); }
+        ConstIterator &operator++() { ++index; return *this; }
+
+    private:
+        const Name *name;
+        int index;
+    };
+
     using Entry::Entry;
 
     explicit Name(QList<QByteArray> labels);
+    explicit Name(QHostAddress address);
 
     QByteArray toByteArray() const;
+
+    int labelCount() const;
     Label label(int i) const;
+
+    ConstIterator begin() const { return {this, 0}; }
+    ConstIterator end() const { return {this, labelCount()}; }
+
+    bool startsWith(const QByteArrayList &prefix) const;
+    bool endsWith(const QByteArrayList &suffix) const;
 
     int size() const;
     int nextOffset() const { return offset() + size(); }
@@ -256,6 +297,13 @@ public:
     Question(QByteArray name, Message::Type type, bool flush = false) noexcept
         : Question{std::move(name), type, Message::IN, flush} {}
 
+    Question(QHostAddress address, Message::Type type, Message::NetworkClass networkClass, bool flush = false) noexcept;
+    Question(QHostAddress address, Message::Type type, bool flush = false) noexcept;
+
+private:
+    Question(Name name, Message::Type type, Message::NetworkClass networkClass, bool flush) noexcept;
+
+public:
     auto name() const { return Name{data(), offset()}; }
     auto type() const { return static_cast<Message::Type>(u16(fieldsOffset() + TypeOffset)); }
     auto networkClass() const { return static_cast<Message::NetworkClass>(u16(fieldsOffset() + FlagsOffset) & 0x7ff); }

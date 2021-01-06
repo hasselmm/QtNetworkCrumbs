@@ -3,6 +3,7 @@
  */
 #include "mdnsmessage.h"
 
+// Qt headers
 #include <QHostAddress>
 #include <QLoggingCategory>
 
@@ -37,7 +38,7 @@ auto makeByteArray(QList<Label> labels)
     return data;
 }
 
-auto makeLabelList(QList<QByteArray> strings)
+auto makeLabelList(QByteArrayList strings)
 {
     QList<Label> labels;
 
@@ -50,6 +51,39 @@ auto makeLabelList(QList<QByteArray> strings)
     labels.append(Label{QByteArray{"", 1}, 0});
 
     return labels;
+}
+
+auto makeLabelList(QHostAddress address)
+{
+    if (address.protocol() == QAbstractSocket::IPv4Protocol) {
+        const auto ipv4 = address.toIPv4Address();
+        return makeLabelList({
+                                 QByteArray::number((ipv4 >> 0) & 255),
+                                 QByteArray::number((ipv4 >> 8) & 255),
+                                 QByteArray::number((ipv4 >> 16) & 255),
+                                 QByteArray::number((ipv4 >> 24) & 255),
+                                 "in-addr", "arpa"
+                             });
+    }
+
+    if (address.protocol() == QAbstractSocket::IPv6Protocol) {
+        const auto ipv6 = address.toIPv6Address();
+
+        QByteArrayList labels;
+        labels.reserve(34);
+
+        for (int i = 15; i >= 0; --i) {
+            labels += QByteArray::number((ipv6[i] >> 0) & 15, 16);
+            labels += QByteArray::number((ipv6[i] >> 4) & 15, 16);
+        }
+
+        labels += "ip6";
+        labels += "arpa";
+
+        return makeLabelList(labels);
+    }
+
+    return QList<Label>{};
 }
 
 } // namespace
@@ -90,34 +124,71 @@ int Label::size() const
 }
 
 Name::Name(QList<QByteArray> labels)
-    : Entry{makeByteArray(makeLabelList(std::move(labels))), 0}
-{}
+    : Entry{makeByteArray(makeLabelList(std::move(labels))), 0} {}
+Name::Name(QHostAddress address)
+    : Entry{makeByteArray(makeLabelList(std::move(address))), 0} {}
 
 QByteArray Name::toByteArray() const
 {
     QByteArray name;
 
-    for (int i = 0;; ++i) {
-        const auto l = label(i);
+    for (const auto &label: *this) {
+        if (!name.isEmpty())
+            name.append('.');
 
-        if (l.isPointer()) {
-            name.append(Name{data(), l.pointer()}.toByteArray());
+        if (label.isPointer()) {
+            name.append(Name{data(), label.pointer()}.toByteArray());
             break;
         }
 
-        if (l.labelLength() == 0)
-            break;
-
-        name.append(l.toByteArray());
-        name.append('.');
+        name.append(label.toByteArray());
     }
 
     return name;
 }
 
+int Name::labelCount() const
+{
+    for (int i = 0;; ++i) {
+        const auto l = label(i);
+        if (l.isPointer())
+            return i + 1;
+        if (label(i).labelLength() == 0)
+            return i;
+    }
+}
+
 Label Name::label(int i) const
 {
-    return Label{data(), i > 0 ? label(i - 1).nextOffset() : offset()};
+    const auto dataOffset = i > 0 ? label(i - 1).nextOffset() : offset();
+    return Label{data(), dataOffset};
+}
+
+bool Name::startsWith(const QByteArrayList &prefix) const
+{
+    auto it = prefix.begin();
+    for (const auto &label: *this) {
+        if (it == prefix.end())
+            return true;
+        if (label.toByteArray() != *it++)
+            return false;
+    }
+
+    return it == prefix.end();
+}
+
+bool Name::endsWith(const QByteArrayList &suffix) const
+{
+    auto it = suffix.rbegin();
+
+    for (auto i = labelCount() - 1; i >= 0; --i) {
+        if (it == suffix.rend())
+            return true;
+        if (label(i).toByteArray() != *it++)
+            return false;
+    }
+
+    return it == suffix.rend();
 }
 
 int Name::size() const
@@ -136,7 +207,14 @@ int Name::size() const
 }
 
 Question::Question(QByteArray name, Message::Type type, Message::NetworkClass networkClass, bool flush) noexcept
-    : Entry{Name{name.split('.')}.data() + QByteArray{4, Qt::Uninitialized}, 0}
+    : Question{Name{name.split('.')}, type, networkClass, flush} {}
+Question::Question(QHostAddress address, Message::Type type, Message::NetworkClass networkClass, bool flush) noexcept
+    : Question{Name{std::move(address)}, type, networkClass, flush} {}
+Question::Question(QHostAddress address, Message::Type type, bool flush) noexcept
+    : Question{Name{std::move(address)}, type, Message::IN, flush} {}
+
+Question::Question(Name name, Message::Type type, Message::NetworkClass networkClass, bool flush) noexcept
+    : Entry{name.data() + QByteArray{4, Qt::Uninitialized}, 0}
 {
     setU16(fieldsOffset() + TypeOffset, type);
     setU16(fieldsOffset() + FlagsOffset, static_cast<quint16>((networkClass & 0x7fU) | (flush ? 0x80U : 0x00U)));
@@ -288,6 +366,11 @@ void Message::setU16(int offset, quint16 value)
 }
 
 } // namespace MDNS
+
+QDebug operator<<(QDebug debug, const MDNS::Label &label)
+{
+    return debug << label.toByteArray();
+}
 
 QDebug operator<<(QDebug debug, const MDNS::Message &message)
 {
