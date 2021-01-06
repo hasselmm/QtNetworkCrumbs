@@ -1,8 +1,12 @@
-add_executable(tst_mdnsmessages tst_mdnsmessages.cpp)
-target_link_libraries(tst_mdnsmessages PRIVATE MDNSResolver Qt5::Test)
-add_test(NAME tst_mdnsmessages COMMAND $<TARGET_FILE:tst_mdnsmessages>)
+function(add_testcase NAME)
+    add_executable(${NAME} ${NAME}.cpp)
+    add_test(NAME ${NAME} COMMAND $<TARGET_FILE:${NAME}>)
+    target_link_libraries(${NAME} PRIVATE MDNSResolver Qt5::Test)
 
-set_target_properties(tst_mdnsmessages PROPERTIES
-    MACOSX_BUNDLE "de.taschenorakel.qnc.tst_mdnsmessages"
-    XCODE_PRODUCT_TYPE "com.apple.product-type.bundle.unit-test"
-    )
+    set_target_properties(${NAME} PROPERTIES
+        MACOSX_BUNDLE "de.taschenorakel.qnc.${NAME}"
+        XCODE_PRODUCT_TYPE "com.apple.product-type.bundle.unit-test")
+endfunction()
+
+add_testcase(tst_mdnsmessages)
+add_testcase(tst_mdnsresolver)
