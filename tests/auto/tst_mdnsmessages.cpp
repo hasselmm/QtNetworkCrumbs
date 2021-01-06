@@ -419,8 +419,8 @@ void MessagesTest::buildMessage()
     QCOMPARE(message.data(), expectedData);
 }
 
-}
-}
+} // namespace Tests
+} // namespace MDNS
 
 QTEST_GUILESS_MAIN(MDNS::Tests::MessagesTest)
 

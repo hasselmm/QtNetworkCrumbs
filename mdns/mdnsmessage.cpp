@@ -3,6 +3,7 @@
  */
 #include "mdnsmessage.h"
 
+// Qt headers
 #include <QHostAddress>
 #include <QLoggingCategory>
 

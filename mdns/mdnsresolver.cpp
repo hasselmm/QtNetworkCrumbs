@@ -3,8 +3,10 @@
  */
 #include "mdnsresolver.h"
 
+// MDNS headers
 #include "mdnsmessage.h"
 
+// Qt headers
 #include <QHostAddress>
 #include <QLoggingCategory>
 #include <QNetworkDatagram>
@@ -12,6 +14,7 @@
 #include <QTimer>
 #include <QUdpSocket>
 
+// STL headers
 #include <unordered_map>
 
 namespace MDNS {
