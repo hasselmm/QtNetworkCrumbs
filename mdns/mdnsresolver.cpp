@@ -49,6 +49,14 @@ auto normalizedHostName(QByteArray name, QString domain)
     return normalizedName;
 }
 
+auto qualifiedHostName(QString name, QString domain)
+{
+    if (!name.endsWith('.'))
+        return name + '.' + domain;
+
+    return name;
+}
+
 }
 
 ServiceDescription::ServiceDescription(QString domain, QByteArray name, ServiceRecord service, QByteArray info)
@@ -92,8 +100,8 @@ void Resolver::lookupHostNames(QStringList hostNames)
     MDNS::Message message;
 
     for (const auto &name: hostNames) {
-        message.addQuestion({(name + m_domain).toLatin1(), MDNS::Message::A});
-        message.addQuestion({(name + m_domain).toLatin1(), MDNS::Message::AAAA});
+        message.addQuestion({qualifiedHostName(name, m_domain).toLatin1(), MDNS::Message::A});
+        message.addQuestion({qualifiedHostName(name, m_domain).toLatin1(), MDNS::Message::AAAA});
     }
 
     lookup(message);
