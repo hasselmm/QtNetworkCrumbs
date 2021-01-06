@@ -340,6 +340,11 @@ void Message::setU16(int offset, quint16 value)
 
 } // namespace MDNS
 
+QDebug operator<<(QDebug debug, const MDNS::Label &label)
+{
+    return debug << label.toByteArray();
+}
+
 QDebug operator<<(QDebug debug, const MDNS::Message &message)
 {
     const QDebugStateSaver saver{debug};
