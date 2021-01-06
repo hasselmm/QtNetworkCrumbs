@@ -100,19 +100,31 @@ private slots:
     void lookupHostNames()
     {
         Resolver resolver;
+
         QVERIFY(resolver.lookupHostNames({"alpha"}));
         QVERIFY(resolver.lookupHostNames({"alpha", "beta"}));
         QVERIFY(!resolver.lookupHostNames({"alpha", "beta"}));
         QVERIFY(resolver.lookupHostNames({"beta"})); // FIXME: do we want to merge this into the previous query?
+
+        // verify search domain gets removed
+        QCOMPARE(resolver.domain(), "local");
+        QVERIFY(!resolver.lookupHostNames({"beta.local"}));
+        QVERIFY(!resolver.lookupHostNames({"beta.local."}));
     }
 
     void lookupServices()
     {
         Resolver resolver;
+
         QVERIFY(resolver.lookupServices({"_http._tcp"}));
         QVERIFY(resolver.lookupServices({"_http._tcp", "_ipp._tcp"}));
         QVERIFY(!resolver.lookupServices({"_http._tcp", "_ipp._tcp"}));
         QVERIFY(resolver.lookupServices({"_ipp._tcp"})); // FIXME: do we want to merge this into the previous query?
+
+        // verify search domain gets removed
+        QCOMPARE(resolver.domain(), "local");
+        QVERIFY(!resolver.lookupServices({"_ipp._tcp.local"}));
+        QVERIFY(!resolver.lookupServices({"_ipp._tcp.local."}));
     }
 };
 

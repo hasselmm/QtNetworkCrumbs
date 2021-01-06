@@ -54,8 +54,10 @@ auto normalizedHostName(QByteArray name, QString domain)
 
 auto qualifiedHostName(QString name, QString domain)
 {
-    if (!name.endsWith('.'))
-        return name + '.' + domain;
+    if (name.endsWith('.'))
+        name.truncate(name.length() - 1);
+    else if (const auto domainSuffix = '.' + domain; !name.endsWith(domainSuffix))
+        name.append(domainSuffix);
 
     return name;
 }
@@ -141,7 +143,7 @@ bool Resolver::lookupServices(QStringList serviceTypes)
     MDNS::Message message;
 
     for (const auto &type: serviceTypes)
-        message.addQuestion({(type + m_domain).toLatin1(), MDNS::Message::PTR});
+        message.addQuestion({qualifiedHostName(type, m_domain).toLatin1(), MDNS::Message::PTR});
 
     return lookup(message);
 }
