@@ -98,32 +98,36 @@ QByteArray Name::toByteArray() const
 {
     QByteArray name;
 
-    for (int i = 0;; ++i) {
-        const auto l = label(i);
+    for (const auto &label: *this) {
+        if (!name.isEmpty())
+            name.append('.');
 
-        if (l.isPointer()) {
-            if (i > 0)
-                name.append('.');
-
-            name.append(Name{data(), l.pointer()}.toByteArray());
+        if (label.isPointer()) {
+            name.append(Name{data(), label.pointer()}.toByteArray());
             break;
         }
 
-        if (l.labelLength() == 0)
-            break;
-
-        if (i > 0)
-            name.append('.');
-
-        name.append(l.toByteArray());
+        name.append(label.toByteArray());
     }
 
     return name;
 }
 
+int Name::labelCount() const
+{
+    for (int i = 0;; ++i) {
+        const auto l = label(i);
+        if (l.isPointer())
+            return i + 1;
+        if (label(i).labelLength() == 0)
+            return i;
+    }
+}
+
 Label Name::label(int i) const
 {
-    return Label{data(), i > 0 ? label(i - 1).nextOffset() : offset()};
+    const auto dataOffset = i > 0 ? label(i - 1).nextOffset() : offset();
+    return Label{data(), dataOffset};
 }
 
 int Name::size() const

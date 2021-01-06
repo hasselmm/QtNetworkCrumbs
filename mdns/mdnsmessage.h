@@ -232,12 +232,45 @@ class Name : public Entry
     Q_GADGET
 
 public:
+    using pointer = Label*;
+    using reference = Label&;
+    using value_type = Label;
+
+    class ConstIterator
+    {
+    public:
+        using iterator_category = std::forward_iterator_tag;
+        using difference_type = int;
+
+        using pointer = Label*;
+        using reference = Label&;
+        using value_type = Label;
+
+        ConstIterator() noexcept = default;
+        constexpr ConstIterator(const Name *name, int index) noexcept
+            : name{name}, index{index} {}
+
+        constexpr bool operator==(const ConstIterator &rhs) const { return std::tie(name, index) == std::tie(rhs.name, rhs.index); }
+        constexpr bool operator!=(const ConstIterator &rhs) const { return !operator==(rhs); }
+        value_type operator*() const { return name->label(index); }
+        ConstIterator &operator++() { ++index; return *this; }
+
+    private:
+        const Name *name;
+        int index;
+    };
+
     using Entry::Entry;
 
     explicit Name(QList<QByteArray> labels);
 
     QByteArray toByteArray() const;
+
+    int labelCount() const;
     Label label(int i) const;
+
+    ConstIterator begin() const { return {this, 0}; }
+    ConstIterator end() const { return {this, labelCount()}; }
 
     int size() const;
     int nextOffset() const { return offset() + size(); }

@@ -415,16 +415,18 @@ private slots:
         QTest::addColumn<QString>("expectedName");
         QTest::addColumn<int>("expectedLabelCount");
 
-        QTest::newRow("direct") << Name{{"\04host\03sub\05local\0", 16}, 0} << "host.sub.local";
-        QTest::newRow("pointer") << Name{{"\03sub\05local\0\04host\xc0\0", 18}, 11} << "host.sub.local";
+        QTest::newRow("direct") << Name{{"\04host\03sub\05local\0", 16}, 0} << "host.sub.local" << 3;
+        QTest::newRow("pointer") << Name{{"\03sub\05local\0\04host\xc0\0", 18}, 11} << "host.sub.local" << 2;
     }
 
     void parseName()
     {
         const QFETCH(Name, name);
         const QFETCH(QString, expectedName);
+        const QFETCH(int, expectedLabelCount);
 
         QCOMPARE(name.toByteArray(), expectedName.toLatin1());
+        QCOMPARE(name.labelCount(), expectedLabelCount);
     }
 
 private:
