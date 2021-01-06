@@ -98,6 +98,32 @@ QString Resolver::domain() const
     return m_domain;
 }
 
+void Resolver::setInterval(std::chrono::milliseconds ms)
+{
+    if (intervalAsDuration() != ms) {
+        m_timer->setInterval(ms);
+        emit intervalChanged(interval());
+    }
+}
+
+void Resolver::setInterval(int ms)
+{
+    if (interval() != ms) {
+        m_timer->setInterval(ms);
+        emit intervalChanged(interval());
+    }
+}
+
+std::chrono::milliseconds Resolver::intervalAsDuration() const
+{
+    return m_timer->intervalAsDuration();
+}
+
+int Resolver::interval() const
+{
+    return m_timer->interval();
+}
+
 void Resolver::lookupHostNames(QStringList hostNames)
 {
     MDNS::Message message;

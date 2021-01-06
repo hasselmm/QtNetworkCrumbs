@@ -47,14 +47,20 @@ class Resolver : public QObject
 {
     Q_OBJECT
     Q_PROPERTY(QString domain READ domain WRITE setDomain NOTIFY domainChanged FINAL)
+    Q_PROPERTY(int interval READ interval WRITE setInterval NOTIFY intervalChanged FINAL)
 
 public:
     explicit Resolver(QObject *parent = {});
 
     QString domain() const;
 
+    int interval() const;
+    std::chrono::milliseconds intervalAsDuration() const;
+    void setInterval(std::chrono::milliseconds ms);
+
 public slots:
     void setDomain(QString domain);
+    void setInterval(int ms);
 
     void lookupHostNames(QStringList hostNames);
     void lookupServices(QStringList serviceTypes);
@@ -62,6 +68,8 @@ public slots:
 
 signals:
     void domainChanged(QString domain);
+    void intervalChanged(int interval);
+
     void hostNameResolved(QString hostname, QList<QHostAddress> addresses);
     void serviceResolved(MDNS::ServiceDescription service);
     void messageReceived(MDNS::Message message);

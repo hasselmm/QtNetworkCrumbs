@@ -59,6 +59,43 @@ private slots:
         QCOMPARE(resolver.domain(), "local");
         QCOMPARE(domainChanges, expectedDomainChanges);
     }
+
+    void intervalProperty()
+    {
+        Resolver resolver;
+        QSignalSpy intervalChanges{&resolver, &Resolver::intervalChanged};
+        QList<QVariantList> expectedIntervalChanges;
+
+        QCOMPARE(resolver.interval(), 2000);
+        QCOMPARE(resolver.intervalAsDuration(), 2s);
+        QCOMPARE(intervalChanges, expectedIntervalChanges);
+
+        resolver.setInterval(2s);
+
+        QCOMPARE(resolver.interval(), 2000);
+        QCOMPARE(resolver.intervalAsDuration(), 2s);
+        QCOMPARE(intervalChanges, expectedIntervalChanges);
+
+        resolver.setInterval(3s);
+
+        expectedIntervalChanges += {3000};
+        QCOMPARE(resolver.interval(), 3000);
+        QCOMPARE(resolver.intervalAsDuration(), 3s);
+        QCOMPARE(intervalChanges, expectedIntervalChanges);
+
+        resolver.setInterval(3000);
+
+        QCOMPARE(resolver.interval(), 3000);
+        QCOMPARE(resolver.intervalAsDuration(), 3s);
+        QCOMPARE(intervalChanges, expectedIntervalChanges);
+
+        resolver.setInterval(3500);
+
+        expectedIntervalChanges += {3500};
+        QCOMPARE(resolver.interval(), 3500);
+        QCOMPARE(resolver.intervalAsDuration(), 3500ms);
+        QCOMPARE(intervalChanges, expectedIntervalChanges);
+    }
 };
 
 } // namespace Tests
