@@ -85,13 +85,14 @@ auto isServiceQuery(Question question)
 
 } // namespace
 
-ServiceDescription::ServiceDescription(QString domain, QByteArray name, ServiceRecord service, QByteArray info)
+ServiceDescription::ServiceDescription(QString domain, QByteArray name, ServiceRecord service, QByteArray info, qint64 ttl)
     : m_name{normalizedHostName(name, domain)}
     , m_target{normalizedHostName(service.target().toByteArray(), domain)}
     , m_port{service.port()}
     , m_priority{service.priority()}
     , m_weight{service.weight()}
     , m_info{std::move(info)}
+    , m_ttl(ttl)
 {
     if (const auto separator = m_name.indexOf('.'); separator >= 0) {
         m_type = m_name.mid(separator + 1);
@@ -155,6 +156,11 @@ QStringList Resolver::hostNameQueries() const
 QStringList Resolver::serviceQueries() const
 {
     return m_serviceQueries;
+}
+
+QByteArrayList Resolver::queryData() const
+{
+    return m_queries;
 }
 
 QList<Message> Resolver::queries() const
@@ -322,37 +328,46 @@ void Resolver::submitQueries() const
     }
 }
 
+void Resolver::parseMessage(Message message)
+{
+    std::unordered_map<QByteArray, std::tuple<QList<QHostAddress>, QList<qint64>>> resolvedAddresses;
+    std::unordered_map<QByteArray, std::tuple<ServiceRecord, qint64>> resolvedServices;
+    std::unordered_map<QByteArray, QByteArray> resolvedText;
+
+    for (const auto &response: message.responses()) {
+        if (const auto address = response.address(); !address.isNull()) {
+            const auto hostName = response.name().toByteArray();
+            auto &[addresses, ttls] = resolvedAddresses[hostName];
+
+            if (!addresses.contains(address)) {
+                ttls.append(response.timeToLife());
+                addresses.append(address);
+            }
+        } else if (const auto service = response.service(); !service.isNull()) {
+            resolvedServices.insert({response.name().toByteArray(), {service, response.timeToLife()}});
+        } else if (const auto text = response.text(); !text.isNull()) {
+            resolvedText.insert({response.name().toByteArray(), text});
+        }
+    }
+
+    for (const auto &[name, serviceInfo]: resolvedServices) {
+        auto &[service, ttl] = serviceInfo;
+        emit serviceResolved({m_domain, name, service, resolvedText[name], ttl});
+    }
+
+    for (const auto &[name, hostInfo]: resolvedAddresses) {
+        auto &[addresses, ttls] = hostInfo;
+        emit hostNameResolved(decodedHostName(name), addresses, ttls);
+    }
+
+    emit messageReceived(std::move(message));
+}
+
 void Resolver::onReadyRead(QUdpSocket *socket)
 {
     while (socket->hasPendingDatagrams()) {
-        if (const auto received = socket->receiveDatagram(); !isOwnMessage(received)) {
-            const MDNS::Message message{received.data()};
-
-            std::unordered_map<QByteArray, QList<QHostAddress>> resolvedAddresses;
-            std::unordered_map<QByteArray, ServiceRecord> resolvedServices;
-            std::unordered_map<QByteArray, QByteArray> resolvedText;
-
-            for (int i = 0; i < message.responseCount(); ++i) {
-                const auto response = message.response(i);
-
-                if (const auto address = response.address(); !address.isNull()) {
-                    auto &knownAddresses = resolvedAddresses[response.name().toByteArray()];
-                    if (!knownAddresses.contains(address))
-                        knownAddresses.append(address);
-                } else if (const auto service = response.service(); !service.isNull()) {
-                    resolvedServices.insert({response.name().toByteArray(), service});
-                } else if (const auto text = response.text(); !text.isNull()) {
-                    resolvedText.insert({response.name().toByteArray(), text});
-                }
-            }
-
-            for (const auto &[name, service]: resolvedServices)
-                emit serviceResolved({m_domain, name, service, resolvedText[name]});
-            for (const auto &[name, addresses]: resolvedAddresses)
-                emit hostNameResolved(normalizedHostName(name, m_domain), addresses);
-
-            emit messageReceived(std::move(message));
-        }
+        if (const auto received = socket->receiveDatagram(); !isOwnMessage(received))
+            parseMessage(MDNS::Message{received.data()});
     }
 }
 

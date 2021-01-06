@@ -21,7 +21,7 @@ class ServiceDescription
     Q_GADGET
 
 public:
-    ServiceDescription(QString domain, QByteArray name, ServiceRecord service, QByteArray info);
+    ServiceDescription(QString domain, QByteArray name, ServiceRecord service, QByteArray info, qint64 ttl);
 
     auto name() const { return m_name; };
     auto type() const { return m_type; }
@@ -30,6 +30,7 @@ public:
     auto weight() const { return m_weight; }
     auto port() const { return m_port; }
     auto info() const { return m_info; }
+    auto ttl() const { return m_ttl; }
 
 private:
     QString m_name;
@@ -41,6 +42,8 @@ private:
     int m_weight;
 
     QByteArray m_info;
+
+    qint64 m_ttl;
 };
 
 class Resolver : public QObject
@@ -60,6 +63,7 @@ public:
 
     QStringList hostNameQueries() const;
     QStringList serviceQueries() const;
+    QByteArrayList queryData() const;
     QList<Message> queries() const;
 
 public slots:
@@ -78,9 +82,12 @@ signals:
     void serviceQueriesChanged(QStringList);
     void queriesChanged();
 
-    void hostNameResolved(QString hostname, QList<QHostAddress> addresses);
+    void hostNameResolved(QString hostName, QList<QHostAddress> addresses, QList<qint64> ttl);
     void serviceResolved(MDNS::ServiceDescription service);
     void messageReceived(MDNS::Message message);
+
+protected:
+    void parseMessage(Message message);
 
 private:
     bool isOwnMessage(QNetworkDatagram message) const;

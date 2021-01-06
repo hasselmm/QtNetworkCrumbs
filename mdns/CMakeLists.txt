@@ -1,8 +1,14 @@
 add_library(MDNSResolver STATIC
+    mdnshostlistmodel.cpp
+    mdnshostlistmodel.h
     mdnsmessage.cpp
     mdnsmessage.h
+    mdnsmodelsupport.cpp
+    mdnsmodelsupport.h
     mdnsresolver.cpp
     mdnsresolver.h
+    mdnsservicelistmodel.cpp
+    mdnsservicelistmodel.h
     )
 
 target_include_directories(MDNSResolver PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
@@ -21,6 +27,13 @@ if (NOT IOS) # FIXME Figure out code signing on Github
     set_target_properties(MDNSResolverDemo PROPERTIES
         MACOSX_BUNDLE "de.taschenorakel.qnc.MDNSResolverDemo"
         XCODE_PRODUCT_TYPE "com.apple.product-type.bundle.unit-test"
+        )
+
+    add_executable(MDNSModelDemo mdnsmodeldemo.cpp)
+    target_link_libraries(MDNSModelDemo PRIVATE MDNSResolver Qt5::Widgets)
+
+    set_target_properties(MDNSModelDemo PROPERTIES
+        MACOSX_BUNDLE "de.taschenorakel.qnc.MDNSModelDemo"
         )
 endif()
 

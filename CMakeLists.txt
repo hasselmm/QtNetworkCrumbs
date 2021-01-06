@@ -16,7 +16,7 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
 
-find_package(Qt5 REQUIRED COMPONENTS Network Test)
+find_package(Qt5 REQUIRED COMPONENTS Network Test Widgets)
 find_package(Qt5 QUIET COMPONENTS Zlib)
 
 message(STATUS "Using Qt ${Qt5_VERSION} from ${Qt5_DIR}")

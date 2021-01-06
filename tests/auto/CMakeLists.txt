@@ -10,3 +10,4 @@ endfunction()
 
 add_testcase(tst_mdnsmessages)
 add_testcase(tst_mdnsresolver)
+add_testcase(tst_mdnsmodels)

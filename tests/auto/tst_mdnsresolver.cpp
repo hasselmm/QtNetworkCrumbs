@@ -128,7 +128,7 @@ private slots:
         QVERIFY(!resolver.lookupServices({"_ipp._tcp.local."}));
     }
 
-    void testHostNameQueries()
+    void hostNameQueries()
     {
         Resolver resolver;
         QSignalSpy hostNameQueryChanges{&resolver, &Resolver::hostNameQueriesChanged};
@@ -197,7 +197,7 @@ private slots:
         QCOMPARE(hostNameQueryChanges, expectedHostNameQueryChanges);
     }
 
-    void testServiceQueries()
+    void serviceQueries()
     {
         Resolver resolver;
         QSignalSpy serviceQueryChanges{&resolver, &Resolver::serviceQueriesChanged};
@@ -257,6 +257,28 @@ private slots:
         QVERIFY(resolver.lookup(Message{}.addQuestion({QHostAddress::LocalHost, Message::PTR})));
         QCOMPARE(resolver.serviceQueries(), expectedServiceQueries);
         QCOMPARE(serviceQueryChanges, expectedServiceQueryChanges);
+    }
+
+    void queryData()
+    {
+        const auto hostNameQuery = QByteArray::fromHex(
+                    "0000 0000 0004 0000 0000 0000"
+                    "08 6a75696369666572 05 6c6f63616c 00 001c 0001"
+                    "08 6a75696369666572 05 6c6f63616c 00 0001 0001"
+                    "07 616e64726f6964   05 6c6f63616c 00 001c 0001"
+                    "07 616e64726f6964   05 6c6f63616c 00 0001 0001");
+        const auto serviceQuery = QByteArray::fromHex(
+                    "0000 0000 0003 0000 0000 0000"
+                    "05 5f68747470               04 5f746370 05 6c6f63616c 00 000c 0001"
+                    "0c 5f787072657373747261696e 04 5f746370 05 6c6f63616c 00 000c 0001"
+                    "0b 5f676f6f676c6563617374   04 5f746370 05 6c6f63616c 00 000c 0001");
+
+        Resolver resolver;
+
+        QCOMPARE(resolver.queryData(), QByteArrayList{});
+        QVERIFY(resolver.lookupHostNames({"juicifer", "android"}));
+        QCOMPARE(resolver.queryData(), QByteArrayList{hostNameQuery});
+        QVERIFY(resolver.lookupServices({"_http._tcp", "_xpresstrain.tcp", "_googlecast.tcp"}));
     }
 };
 
