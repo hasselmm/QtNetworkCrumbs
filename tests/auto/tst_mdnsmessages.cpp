@@ -299,10 +299,9 @@ void MessagesTest::parseMessage()
     QCOMPARE(message.authorityCount(), expectedHeaders[4]);
     QCOMPARE(message.additionalCount(), expectedHeaders[5]);
 
-    for (int i = 0; i < message.questionCount(); ++i) {
-        QVERIFY2(!expectedRecords.isEmpty(), QByteArray::number(i).constData());
+    for (const auto &question: message.questions()) {
+        QVERIFY(!expectedRecords.isEmpty());
         auto expectedFields = expectedRecords.takeFirst();
-        const auto question = message.question(i);
 
         QVERIFY(!expectedFields.isEmpty());
         QCOMPARE(question.name().toByteArray(), expectedFields.takeFirst());
@@ -319,70 +318,57 @@ void MessagesTest::parseMessage()
         QCOMPARE(expectedFields, {});
     }
 
-    struct RecordType {
-        int (Message::*count)() const;
-        Resource (Message::*lookup)(int) const;
-    };
+    for (const auto &resource: message.responses()) {
+        QVERIFY(!expectedRecords.isEmpty());
+        auto expectedFields = expectedRecords.takeFirst();
 
-    const std::vector<RecordType> recordTypes = {
-        {&Message::answerCount, &Message::answer},
-        {&Message::authorityCount, &Message::authority},
-        {&Message::additionalCount, &Message::additional},
-    };
-    for (const auto &rt: recordTypes) {
-        for (int i = 0; i < (message.*rt.count)(); ++i) {
-            QVERIFY2(!expectedRecords.isEmpty(), QByteArray::number(i).constData());
-            auto expectedFields = expectedRecords.takeFirst();
-            const auto resource = (message.*rt.lookup)(i);
+        QVERIFY(!expectedFields.isEmpty());
+        QCOMPARE(resource.name().toByteArray(), expectedFields.takeFirst());
+
+        QVERIFY(!expectedFields.isEmpty());
+        QCOMPARE(resource.type(), expectedFields.takeFirst());
+
+        QVERIFY(!expectedFields.isEmpty());
+        QCOMPARE(resource.networkClass(), expectedFields.takeFirst());
+
+        QVERIFY(!expectedFields.isEmpty());
+        QCOMPARE(resource.flush(), expectedFields.takeFirst());
+
+        QVERIFY(!expectedFields.isEmpty());
+        QCOMPARE(resource.timeToLife(), expectedFields.takeFirst());
+
+        switch (resource.type()) {
+        case Message::A:
+        case Message::AAAA:
+            QVERIFY(!expectedFields.isEmpty());
+            QCOMPARE(resource.address(), expectedFields.takeFirst().value<QHostAddress>());
+            break;
+
+        case Message::PTR:
+            QVERIFY(!expectedFields.isEmpty());
+            QCOMPARE(resource.pointer().toByteArray(), expectedFields.takeFirst());
+            break;
+
+        case Message::SRV:
+            QVERIFY(!expectedFields.isEmpty());
+            QCOMPARE(resource.service().priority(), expectedFields.takeFirst());
 
             QVERIFY(!expectedFields.isEmpty());
-            QCOMPARE(resource.name().toByteArray(), expectedFields.takeFirst());
+            QCOMPARE(resource.service().weight(), expectedFields.takeFirst());
 
             QVERIFY(!expectedFields.isEmpty());
-            QCOMPARE(resource.type(), expectedFields.takeFirst());
+            QCOMPARE(resource.service().port(), expectedFields.takeFirst());
 
             QVERIFY(!expectedFields.isEmpty());
-            QCOMPARE(resource.networkClass(), expectedFields.takeFirst());
+            QCOMPARE(resource.service().target().toByteArray(), expectedFields.takeFirst());
+            break;
 
-            QVERIFY(!expectedFields.isEmpty());
-            QCOMPARE(resource.flush(), expectedFields.takeFirst());
-
-            QVERIFY(!expectedFields.isEmpty());
-            QCOMPARE(resource.timeToLife(), expectedFields.takeFirst());
-
-            switch (resource.type()) {
-            case Message::A:
-            case Message::AAAA:
-                QVERIFY(!expectedFields.isEmpty());
-                QCOMPARE(resource.address(), expectedFields.takeFirst().value<QHostAddress>());
-                break;
-
-            case Message::PTR:
-                QVERIFY(!expectedFields.isEmpty());
-                QCOMPARE(resource.pointer().toByteArray(), expectedFields.takeFirst());
-                break;
-
-            case Message::SRV:
-                QVERIFY(!expectedFields.isEmpty());
-                QCOMPARE(resource.service().priority(), expectedFields.takeFirst());
-
-                QVERIFY(!expectedFields.isEmpty());
-                QCOMPARE(resource.service().weight(), expectedFields.takeFirst());
-
-                QVERIFY(!expectedFields.isEmpty());
-                QCOMPARE(resource.service().port(), expectedFields.takeFirst());
-
-                QVERIFY(!expectedFields.isEmpty());
-                QCOMPARE(resource.service().target().toByteArray(), expectedFields.takeFirst());
-                break;
-
-            default:
-                qWarning("FIXME: Resource type %d not verified", resource.type());
-                break;
-            }
-
-            QCOMPARE(expectedFields, {});
+        default:
+            qWarning("FIXME: Resource type %d not verified", resource.type());
+            break;
         }
+
+        QCOMPARE(expectedFields, {});
     }
 
     QCOMPARE(expectedRecords, {});
