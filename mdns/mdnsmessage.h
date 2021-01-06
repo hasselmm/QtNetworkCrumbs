@@ -144,6 +144,60 @@ public:
 
     auto data() const { return m_data; }
 
+    template<class T>
+    class ResourceList
+    {
+    public:
+        using pointer = T*;
+        using reference = T&;
+        using value_type = T;
+
+        using LookupFunction = T (Message::*)(int i) const;
+        using CountFunction = int (Message::*)() const;
+
+        class ConstIterator
+        {
+        public:
+            using pointer = T*;
+            using reference = T&;
+            using value_type = T;
+
+            constexpr ConstIterator() noexcept = default;
+            constexpr ConstIterator(const ResourceList *list, int index) noexcept
+                : list{list}, index{index} {}
+
+            constexpr bool operator==(const ConstIterator &rhs) const { return std::tie(list, index) == std::tie(rhs.list, rhs.index); }
+            constexpr bool operator!=(const ConstIterator &rhs) const { return !operator==(rhs); }
+            value_type operator*() const { return list->at(index); }
+            ConstIterator &operator++() { ++index; return *this; }
+
+        private:
+            const ResourceList *list;
+            int index;
+        };
+
+        constexpr ResourceList() noexcept = default;
+        constexpr ResourceList(const Message *message, LookupFunction lookup, CountFunction count) noexcept
+            : message{message}, lookup{lookup}, count{count} {}
+
+        ConstIterator begin() const { return {this, 0}; }
+        ConstIterator end() const { return {this, (message->*count)()}; }
+
+        value_type at(int index) const { return (message->*lookup)(index); }
+        value_type operator[](int index) const { return at(index); }
+
+    private:
+        const Message *message = {};
+        LookupFunction lookup = {};
+        CountFunction count = {};
+    };
+
+    ResourceList<Question> questions() const { return {this, &Message::question, &Message::questionCount}; }
+    ResourceList<Resource> answers() const { return {this, &Message::answer, &Message::answerCount}; }
+    ResourceList<Resource> authorities() const { return {this, &Message::authority, &Message::authorityCount}; }
+    ResourceList<Resource> additionals() const { return {this, &Message::additional, &Message::additionalCount}; }
+    ResourceList<Resource> responses() const { return {this, &Message::response, &Message::responseCount}; }
+
 private:
     quint16 u16(int offset) const;
     void setU16(int offset, quint16 value);
