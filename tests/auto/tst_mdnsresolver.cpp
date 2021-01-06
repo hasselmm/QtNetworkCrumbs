@@ -96,6 +96,24 @@ private slots:
         QCOMPARE(resolver.intervalAsDuration(), 3500ms);
         QCOMPARE(intervalChanges, expectedIntervalChanges);
     }
+
+    void lookupHostNames()
+    {
+        Resolver resolver;
+        QVERIFY(resolver.lookupHostNames({"alpha"}));
+        QVERIFY(resolver.lookupHostNames({"alpha", "beta"}));
+        QVERIFY(!resolver.lookupHostNames({"alpha", "beta"}));
+        QVERIFY(resolver.lookupHostNames({"beta"})); // FIXME: do we want to merge this into the previous query?
+    }
+
+    void lookupServices()
+    {
+        Resolver resolver;
+        QVERIFY(resolver.lookupServices({"_http._tcp"}));
+        QVERIFY(resolver.lookupServices({"_http._tcp", "_ipp._tcp"}));
+        QVERIFY(!resolver.lookupServices({"_http._tcp", "_ipp._tcp"}));
+        QVERIFY(resolver.lookupServices({"_ipp._tcp"})); // FIXME: do we want to merge this into the previous query?
+    }
 };
 
 } // namespace Tests

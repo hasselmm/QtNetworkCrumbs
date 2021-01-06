@@ -62,9 +62,9 @@ public slots:
     void setDomain(QString domain);
     void setInterval(int ms);
 
-    void lookupHostNames(QStringList hostNames);
-    void lookupServices(QStringList serviceTypes);
-    void lookup(MDNS::Message query);
+    bool lookupHostNames(QStringList hostNames);
+    bool lookupServices(QStringList serviceTypes);
+    bool lookup(MDNS::Message query);
 
 signals:
     void domainChanged(QString domain);

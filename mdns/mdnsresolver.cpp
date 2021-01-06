@@ -124,7 +124,7 @@ int Resolver::interval() const
     return m_timer->interval();
 }
 
-void Resolver::lookupHostNames(QStringList hostNames)
+bool Resolver::lookupHostNames(QStringList hostNames)
 {
     MDNS::Message message;
 
@@ -133,23 +133,27 @@ void Resolver::lookupHostNames(QStringList hostNames)
         message.addQuestion({qualifiedHostName(name, m_domain).toLatin1(), MDNS::Message::AAAA});
     }
 
-    lookup(message);
+    return lookup(message);
 }
 
-void Resolver::lookupServices(QStringList serviceTypes)
+bool Resolver::lookupServices(QStringList serviceTypes)
 {
     MDNS::Message message;
 
     for (const auto &type: serviceTypes)
         message.addQuestion({(type + m_domain).toLatin1(), MDNS::Message::PTR});
 
-    lookup(message);
+    return lookup(message);
 }
 
-void Resolver::lookup(Message query)
+bool Resolver::lookup(Message query)
 {
-    if (const auto data = query.data(); !m_queries.contains(data))
+    if (const auto data = query.data(); !m_queries.contains(data)) {
         m_queries.append(std::move(data));
+        return true;
+    }
+
+    return false;
 }
 
 bool Resolver::isOwnMessage(QNetworkDatagram message) const
