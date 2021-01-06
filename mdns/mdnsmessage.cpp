@@ -102,6 +102,9 @@ QByteArray Name::toByteArray() const
         const auto l = label(i);
 
         if (l.isPointer()) {
+            if (i > 0)
+                name.append('.');
+
             name.append(Name{data(), l.pointer()}.toByteArray());
             break;
         }
@@ -109,8 +112,10 @@ QByteArray Name::toByteArray() const
         if (l.labelLength() == 0)
             break;
 
+        if (i > 0)
+            name.append('.');
+
         name.append(l.toByteArray());
-        name.append('.');
     }
 
     return name;

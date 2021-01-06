@@ -40,8 +40,8 @@ private slots:
                                    "c 03c"                                                              // #QR#1: PTR
                                        "000c 0001")
                 << QList<int>{30, 0, 2, 0, 0, 0}
-                << RecordList({{"_%9E5E7C8F47989526C9BCD95D24084F6F0B27C5ED._sub._googlecast._tcp.local.", Message::PTR, Message::IN, false},
-                               {"_googlecast._tcp.local.", Message::PTR, Message::IN, false}});
+                << RecordList({{"_%9E5E7C8F47989526C9BCD95D24084F6F0B27C5ED._sub._googlecast._tcp.local", Message::PTR, Message::IN, false},
+                               {"_googlecast._tcp.local", Message::PTR, Message::IN, false}});
 
         QTest::newRow("googlecast:q2")
                 << QByteArray::fromHex("0000 0000"
@@ -52,7 +52,7 @@ private slots:
                                    "00"
                                    "000c 0001")
                 << QList<int>{0, 0, 1, 0, 0, 0}
-                << RecordList({{"_googlecast._tcp.local.", Message::PTR, Message::IN, false}});
+                << RecordList({{"_googlecast._tcp.local", Message::PTR, Message::IN, false}});
 
         QTest::newRow("googlecast:r1")
                 << QByteArray::fromHex("0000 8400"
@@ -83,10 +83,10 @@ private slots:
                                        "0001 8001 00000078 0004"
                                    "c0a8b23c")
                 << QList<int>{0, Message::IsResponse | Message::AuthoritativeAnswer, 0, 1, 0, 3}
-                << RecordList({{"_googlecast._tcp.local.", Message::PTR, Message::IN, false, 120, "BRAVIA-4K-GB-4a3cee71d3f7f8029b24a26b902d9781._googlecast._tcp.local."},
-                               {"BRAVIA-4K-GB-4a3cee71d3f7f8029b24a26b902d9781._googlecast._tcp.local.", Message::TXT, Message::IN, true, 4500},
-                               {"BRAVIA-4K-GB-4a3cee71d3f7f8029b24a26b902d9781._googlecast._tcp.local.", Message::SRV, Message::IN, true, 120, 0, 0, 8009, "4a3cee71-d3f7-f802-9b24-a26b902d9781.local."},
-                               {"4a3cee71-d3f7-f802-9b24-a26b902d9781.local.", Message::A, Message::IN, true, 120, hostAddress("192.168.178.60")}});
+                << RecordList({{"_googlecast._tcp.local", Message::PTR, Message::IN, false, 120, "BRAVIA-4K-GB-4a3cee71d3f7f8029b24a26b902d9781._googlecast._tcp.local"},
+                               {"BRAVIA-4K-GB-4a3cee71d3f7f8029b24a26b902d9781._googlecast._tcp.local", Message::TXT, Message::IN, true, 4500},
+                               {"BRAVIA-4K-GB-4a3cee71d3f7f8029b24a26b902d9781._googlecast._tcp.local", Message::SRV, Message::IN, true, 120, 0, 0, 8009, "4a3cee71-d3f7-f802-9b24-a26b902d9781.local"},
+                               {"4a3cee71-d3f7-f802-9b24-a26b902d9781.local", Message::A, Message::IN, true, 120, hostAddress("192.168.178.60")}});
 
         QTest::newRow("androidtv:q1")
                 << QByteArray::fromHex("0000 0000"
@@ -120,11 +120,11 @@ private slots:
                                  // 1 2 3 4 5 6 7 8  1 2 3 4 5 6 7 8  1 2 3 4 5 6 7 8  1 2 3 4 5 6 7 8  1 2 3 4 5 6 7 8  1 2 3 4 5 6 7 8  1 2 3 4 5 6 7 8
                                        )
                 << QList<int>{0, 0, 2, 0, 3, 0}
-                << RecordList({{"BRAVIA-4K-GB-4a3cee71d3f7f8029b24a26b902d9781._googlecast._tcp.local.", Message::ANY, Message::IN, false},
-                               {"4a3cee71-d3f7-f802-9b24-a26b902d9781.local.", Message::ANY, Message::IN, false},
-                               {"BRAVIA-4K-GB-4a3cee71d3f7f8029b24a26b902d9781._googlecast._tcp.local.", Message::TXT, Message::IN, true, 4500},
-                               {"BRAVIA-4K-GB-4a3cee71d3f7f8029b24a26b902d9781._googlecast._tcp.local.", Message::SRV, Message::IN, true, 120, 0, 0, 8009, "4a3cee71-d3f7-f802-9b24-a26b902d9781.local."},
-                               {"4a3cee71-d3f7-f802-9b24-a26b902d9781.local.", Message::A, Message::IN, true, 120, hostAddress("192.168.178.60")},
+                << RecordList({{"BRAVIA-4K-GB-4a3cee71d3f7f8029b24a26b902d9781._googlecast._tcp.local", Message::ANY, Message::IN, false},
+                               {"4a3cee71-d3f7-f802-9b24-a26b902d9781.local", Message::ANY, Message::IN, false},
+                               {"BRAVIA-4K-GB-4a3cee71d3f7f8029b24a26b902d9781._googlecast._tcp.local", Message::TXT, Message::IN, true, 4500},
+                               {"BRAVIA-4K-GB-4a3cee71d3f7f8029b24a26b902d9781._googlecast._tcp.local", Message::SRV, Message::IN, true, 120, 0, 0, 8009, "4a3cee71-d3f7-f802-9b24-a26b902d9781.local"},
+                               {"4a3cee71-d3f7-f802-9b24-a26b902d9781.local", Message::A, Message::IN, true, 120, hostAddress("192.168.178.60")},
                               });
 
         QTest::newRow("androidtv:r2")
@@ -160,14 +160,14 @@ private slots:
                                        "001c 0001 00000078 0010"
                                    "fe80000000000000124fa8fffe86d528")
                 << QList<int>{0, 0, 4, 0, 4, 0}
-                << RecordList({{"adb-54a41f016001123._adb._tcp.local.", Message::ANY, Message::IN, false},
-                               {"KD-55XD8005._androidtvremote._tcp.local.", Message::ANY, Message::IN, false},
-                               {"Android.local.", Message::ANY, Message::IN, false},
-                               {"Android.local.", Message::ANY, Message::IN, false},
-                               {"adb-54a41f016001123._adb._tcp.local.", Message::SRV, Message::IN, false, 120, 0, 0, 5555, "Android.local."},
-                               {"KD-55XD8005._androidtvremote._tcp.local.", Message::SRV, Message::IN, false, 120, 0, 0, 6466, "Android.local."},
-                               {"Android.local.", Message::A, Message::IN, false, 120, hostAddress("192.168.178.60")},
-                               {"Android.local.", Message::AAAA, Message::IN, false, 120, hostAddress("fe80::124f:a8ff:fe86:d528")},
+                << RecordList({{"adb-54a41f016001123._adb._tcp.local", Message::ANY, Message::IN, false},
+                               {"KD-55XD8005._androidtvremote._tcp.local", Message::ANY, Message::IN, false},
+                               {"Android.local", Message::ANY, Message::IN, false},
+                               {"Android.local", Message::ANY, Message::IN, false},
+                               {"adb-54a41f016001123._adb._tcp.local", Message::SRV, Message::IN, false, 120, 0, 0, 5555, "Android.local"},
+                               {"KD-55XD8005._androidtvremote._tcp.local", Message::SRV, Message::IN, false, 120, 0, 0, 6466, "Android.local"},
+                               {"Android.local", Message::A, Message::IN, false, 120, hostAddress("192.168.178.60")},
+                               {"Android.local", Message::AAAA, Message::IN, false, 120, hostAddress("fe80::124f:a8ff:fe86:d528")},
                               });
 
         QTest::newRow("androidtv:r1")
@@ -252,23 +252,23 @@ private slots:
                                        "002f 8001 00000078 0008"
                                    "c 081 00 04 40000008")
                 << QList<int>{0, Message::IsResponse | Message::AuthoritativeAnswer, 0, 12, 0, 5}
-                << RecordList({{"adb-54a41f016001123._adb._tcp.local.", Message::TXT, Message::IN, true, 4500},
-                               {"_services._dns-sd._udp.local.", Message::PTR, Message::IN, false, 4500, "_adb._tcp.local."},
-                               {"_adb._tcp.local.", Message::PTR, Message::IN, false, 4500, "adb-54a41f016001123._adb._tcp.local."},
-                               {"adb-54a41f016001123._adb._tcp.local.", Message::SRV, Message::IN, true, 120, 0, 0, 5555, "Android.local."},
-                               {"KD-55XD8005._androidtvremote._tcp.local.", Message::TXT, Message::IN, true, 4500},
-                               {"_services._dns-sd._udp.local.", Message::PTR, Message::IN, false, 4500, "_androidtvremote._tcp.local."},
-                               {"_androidtvremote._tcp.local.", Message::PTR, Message::IN, false, 4500, "KD-55XD8005._androidtvremote._tcp.local."},
-                               {"KD-55XD8005._androidtvremote._tcp.local.", Message::SRV, Message::IN, true, 120, 0, 0, 6466, "Android.local."},
-                               {"60.178.168.192.in-addr.arpa.", Message::PTR, Message::IN, true, 120, "Android.local."},
-                               {"8.2.5.D.6.8.E.F.F.F.8.A.F.4.2.1.0.0.0.0.0.0.0.0.0.0.0.0.0.8.E.F.ip6.arpa.", Message::PTR, Message::IN, true, 120, "Android.local."},
-                               {"Android.local.", Message::A, Message::IN, true, 120, hostAddress("192.168.178.60")},
-                               {"Android.local.", Message::AAAA, Message::IN, true, 120, hostAddress("fe80::124f:a8ff:fe86:d528")},
-                               {"adb-54a41f016001123._adb._tcp.local.", Message::NSEC, Message::IN, true, 4500},
-                               {"KD-55XD8005._androidtvremote._tcp.local.", Message::NSEC, Message::IN, true, 4500},
-                               {"60.178.168.192.in-addr.arpa.", Message::NSEC, Message::IN, true, 120},
-                               {"8.2.5.D.6.8.E.F.F.F.8.A.F.4.2.1.0.0.0.0.0.0.0.0.0.0.0.0.0.8.E.F.ip6.arpa.", Message::NSEC, Message::IN, true, 120},
-                               {"Android.local.", Message::NSEC, Message::IN, true, 120},
+                << RecordList({{"adb-54a41f016001123._adb._tcp.local", Message::TXT, Message::IN, true, 4500},
+                               {"_services._dns-sd._udp.local", Message::PTR, Message::IN, false, 4500, "_adb._tcp.local"},
+                               {"_adb._tcp.local", Message::PTR, Message::IN, false, 4500, "adb-54a41f016001123._adb._tcp.local"},
+                               {"adb-54a41f016001123._adb._tcp.local", Message::SRV, Message::IN, true, 120, 0, 0, 5555, "Android.local"},
+                               {"KD-55XD8005._androidtvremote._tcp.local", Message::TXT, Message::IN, true, 4500},
+                               {"_services._dns-sd._udp.local", Message::PTR, Message::IN, false, 4500, "_androidtvremote._tcp.local"},
+                               {"_androidtvremote._tcp.local", Message::PTR, Message::IN, false, 4500, "KD-55XD8005._androidtvremote._tcp.local"},
+                               {"KD-55XD8005._androidtvremote._tcp.local", Message::SRV, Message::IN, true, 120, 0, 0, 6466, "Android.local"},
+                               {"60.178.168.192.in-addr.arpa", Message::PTR, Message::IN, true, 120, "Android.local"},
+                               {"8.2.5.D.6.8.E.F.F.F.8.A.F.4.2.1.0.0.0.0.0.0.0.0.0.0.0.0.0.8.E.F.ip6.arpa", Message::PTR, Message::IN, true, 120, "Android.local"},
+                               {"Android.local", Message::A, Message::IN, true, 120, hostAddress("192.168.178.60")},
+                               {"Android.local", Message::AAAA, Message::IN, true, 120, hostAddress("fe80::124f:a8ff:fe86:d528")},
+                               {"adb-54a41f016001123._adb._tcp.local", Message::NSEC, Message::IN, true, 4500},
+                               {"KD-55XD8005._androidtvremote._tcp.local", Message::NSEC, Message::IN, true, 4500},
+                               {"60.178.168.192.in-addr.arpa", Message::NSEC, Message::IN, true, 120},
+                               {"8.2.5.D.6.8.E.F.F.F.8.A.F.4.2.1.0.0.0.0.0.0.0.0.0.0.0.0.0.8.E.F.ip6.arpa", Message::NSEC, Message::IN, true, 120},
+                               {"Android.local", Message::NSEC, Message::IN, true, 120},
                               });
     }
 
@@ -407,6 +407,24 @@ private slots:
         QFETCH(Message, message);
         QFETCH(QByteArray, expectedData);
         QCOMPARE(message.data(), expectedData);
+    }
+
+    void parseName_data()
+    {
+        QTest::addColumn<Name>("name");
+        QTest::addColumn<QString>("expectedName");
+        QTest::addColumn<int>("expectedLabelCount");
+
+        QTest::newRow("direct") << Name{{"\04host\03sub\05local\0", 16}, 0} << "host.sub.local";
+        QTest::newRow("pointer") << Name{{"\03sub\05local\0\04host\xc0\0", 18}, 11} << "host.sub.local";
+    }
+
+    void parseName()
+    {
+        const QFETCH(Name, name);
+        const QFETCH(QString, expectedName);
+
+        QCOMPARE(name.toByteArray(), expectedName.toLatin1());
     }
 
 private:
