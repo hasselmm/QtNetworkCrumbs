@@ -87,15 +87,15 @@ Resolver::Resolver(QObject *parent)
     m_timer->start(2s);
 }
 
-QString Resolver::domain() const
-{
-    return m_domain;
-}
-
 void Resolver::setDomain(QString domain)
 {
     if (std::exchange(m_domain, domain) != domain)
         emit domainChanged(m_domain);
+}
+
+QString Resolver::domain() const
+{
+    return m_domain;
 }
 
 void Resolver::lookupHostNames(QStringList hostNames)
