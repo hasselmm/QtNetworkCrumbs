@@ -53,6 +53,39 @@ auto makeLabelList(QList<QByteArray> strings)
     return labels;
 }
 
+auto makeLabelList(QHostAddress address)
+{
+    if (address.protocol() == QAbstractSocket::IPv4Protocol) {
+        const auto ipv4 = address.toIPv4Address();
+        return makeLabelList({
+                                 QByteArray::number((ipv4 >> 0) & 255),
+                                 QByteArray::number((ipv4 >> 8) & 255),
+                                 QByteArray::number((ipv4 >> 16) & 255),
+                                 QByteArray::number((ipv4 >> 24) & 255),
+                                 "in-addr", "arpa"
+                             });
+    }
+
+    if (address.protocol() == QAbstractSocket::IPv6Protocol) {
+        const auto ipv6 = address.toIPv6Address();
+
+        QByteArrayList labels;
+        labels.reserve(34);
+
+        for (int i = 15; i >= 0; --i) {
+            labels += QByteArray::number((ipv6[i] >> 0) & 15, 16);
+            labels += QByteArray::number((ipv6[i] >> 4) & 15, 16);
+        }
+
+        labels += "ip6";
+        labels += "arpa";
+
+        return makeLabelList(labels);
+    }
+
+    return QList<Label>{};
+}
+
 } // namespace
 
 Entry::Entry(QByteArray data, int offset)
@@ -91,8 +124,9 @@ int Label::size() const
 }
 
 Name::Name(QList<QByteArray> labels)
-    : Entry{makeByteArray(makeLabelList(std::move(labels))), 0}
-{}
+    : Entry{makeByteArray(makeLabelList(std::move(labels))), 0} {}
+Name::Name(QHostAddress address)
+    : Entry{makeByteArray(makeLabelList(std::move(address))), 0} {}
 
 QByteArray Name::toByteArray() const
 {
@@ -146,7 +180,14 @@ int Name::size() const
 }
 
 Question::Question(QByteArray name, Message::Type type, Message::NetworkClass networkClass, bool flush) noexcept
-    : Entry{Name{name.split('.')}.data() + QByteArray{4, Qt::Uninitialized}, 0}
+    : Question{Name{name.split('.')}, type, networkClass, flush} {}
+Question::Question(QHostAddress address, Message::Type type, Message::NetworkClass networkClass, bool flush) noexcept
+    : Question{Name{std::move(address)}, type, networkClass, flush} {}
+Question::Question(QHostAddress address, Message::Type type, bool flush) noexcept
+    : Question{Name{std::move(address)}, type, Message::IN, flush} {}
+
+Question::Question(Name name, Message::Type type, Message::NetworkClass networkClass, bool flush) noexcept
+    : Entry{name.data() + QByteArray{4, Qt::Uninitialized}, 0}
 {
     setU16(fieldsOffset() + TypeOffset, type);
     setU16(fieldsOffset() + FlagsOffset, static_cast<quint16>((networkClass & 0x7fU) | (flush ? 0x80U : 0x00U)));

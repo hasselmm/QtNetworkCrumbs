@@ -417,6 +417,9 @@ private slots:
 
         QTest::newRow("direct") << Name{{"\04host\03sub\05local\0", 16}, 0} << "host.sub.local" << 3;
         QTest::newRow("pointer") << Name{{"\03sub\05local\0\04host\xc0\0", 18}, 11} << "host.sub.local" << 2;
+        QTest::newRow("ipv4") << Name{QHostAddress::LocalHost} << "1.0.0.127.in-addr.arpa" << 6;
+        QTest::newRow("ipv6") << Name{QHostAddress{"4321:0:1:2:3:4:567:89ab"}}
+                              << "b.a.9.8.7.6.5.0.4.0.0.0.3.0.0.0.2.0.0.0.1.0.0.0.0.0.0.0.1.2.3.4.ip6.arpa" << 34;
     }
 
     void parseName()

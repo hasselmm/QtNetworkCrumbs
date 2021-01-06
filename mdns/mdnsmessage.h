@@ -263,6 +263,7 @@ public:
     using Entry::Entry;
 
     explicit Name(QList<QByteArray> labels);
+    explicit Name(QHostAddress address);
 
     QByteArray toByteArray() const;
 
@@ -293,6 +294,13 @@ public:
     Question(QByteArray name, Message::Type type, bool flush = false) noexcept
         : Question{std::move(name), type, Message::IN, flush} {}
 
+    Question(QHostAddress address, Message::Type type, Message::NetworkClass networkClass, bool flush = false) noexcept;
+    Question(QHostAddress address, Message::Type type, bool flush = false) noexcept;
+
+private:
+    Question(Name name, Message::Type type, Message::NetworkClass networkClass, bool flush) noexcept;
+
+public:
     auto name() const { return Name{data(), offset()}; }
     auto type() const { return static_cast<Message::Type>(u16(fieldsOffset() + TypeOffset)); }
     auto networkClass() const { return static_cast<Message::NetworkClass>(u16(fieldsOffset() + FlagsOffset) & 0x7ff); }
