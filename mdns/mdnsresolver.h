@@ -58,6 +58,10 @@ public:
     std::chrono::milliseconds intervalAsDuration() const;
     void setInterval(std::chrono::milliseconds ms);
 
+    QStringList hostNameQueries() const;
+    QStringList serviceQueries() const;
+    QList<Message> queries() const;
+
 public slots:
     void setDomain(QString domain);
     void setInterval(int ms);
@@ -69,6 +73,10 @@ public slots:
 signals:
     void domainChanged(QString domain);
     void intervalChanged(int interval);
+
+    void hostNameQueriesChanged(QStringList);
+    void serviceQueriesChanged(QStringList);
+    void queriesChanged();
 
     void hostNameResolved(QString hostname, QList<QHostAddress> addresses);
     void serviceResolved(MDNS::ServiceDescription service);
@@ -89,6 +97,8 @@ private:
 
     QString m_domain;
     QByteArrayList m_queries;
+    QStringList m_hostNameQueries;
+    QStringList m_serviceQueries;
     QList<QHostAddress> m_ownAddresses;
 };
 

@@ -62,7 +62,28 @@ auto qualifiedHostName(QString name, QString domain)
     return name;
 }
 
+auto encodedHostName(QString hostName)
+{
+    return hostName.toLatin1(); // FIXME: encode non-ASCII characters (issue #5)
 }
+
+auto decodedHostName(QByteArray hostName)
+{
+    return QString::fromLatin1(hostName); // FIXME: encode non-ASCII characters (issue #5)
+}
+
+template<class Record>
+auto isAddressRecord(Record record)
+{
+    return record.type() == Message::A || record.type() == Message::AAAA;
+}
+
+auto isServiceQuery(Question question)
+{
+    return question.type() == Message::PTR && !question.name().endsWith({"arpa"});
+}
+
+} // namespace
 
 ServiceDescription::ServiceDescription(QString domain, QByteArray name, ServiceRecord service, QByteArray info)
     : m_name{normalizedHostName(name, domain)}
@@ -126,13 +147,40 @@ int Resolver::interval() const
     return m_timer->interval();
 }
 
+QStringList Resolver::hostNameQueries() const
+{
+    return m_hostNameQueries;
+}
+
+QStringList Resolver::serviceQueries() const
+{
+    return m_serviceQueries;
+}
+
+QList<Message> Resolver::queries() const
+{
+    const auto makeMessage = [](QByteArray data) {
+        return Message{std::move(data)};
+    };
+
+    QList<Message> messages;
+    messages.reserve(m_queries.size());
+    std::transform(m_queries.begin(), m_queries.end(),
+                   std::back_inserter(messages), makeMessage);
+    return messages;
+}
+
 bool Resolver::lookupHostNames(QStringList hostNames)
 {
     MDNS::Message message;
 
     for (const auto &name: hostNames) {
-        message.addQuestion({qualifiedHostName(name, m_domain).toLatin1(), MDNS::Message::A});
-        message.addQuestion({qualifiedHostName(name, m_domain).toLatin1(), MDNS::Message::AAAA});
+        const auto qualifiedName = qualifiedHostName(name, m_domain);
+        if (!m_hostNameQueries.contains(qualifiedName)) {
+            const auto encodedName = encodedHostName(qualifiedName);
+            message.addQuestion({encodedName, MDNS::Message::AAAA});
+            message.addQuestion({encodedName, MDNS::Message::A});
+        }
     }
 
     return lookup(message);
@@ -142,20 +190,54 @@ bool Resolver::lookupServices(QStringList serviceTypes)
 {
     MDNS::Message message;
 
-    for (const auto &type: serviceTypes)
-        message.addQuestion({qualifiedHostName(type, m_domain).toLatin1(), MDNS::Message::PTR});
+    for (const auto &type: serviceTypes) {
+        const auto qualifiedName = qualifiedHostName(type, m_domain);
+        if (!m_serviceQueries.contains(qualifiedName)) {
+            const auto encodedName = encodedHostName(qualifiedName);
+            message.addQuestion({encodedName, MDNS::Message::PTR});
+        }
+    }
 
     return lookup(message);
 }
 
 bool Resolver::lookup(Message query)
 {
-    if (const auto data = query.data(); !m_queries.contains(data)) {
-        m_queries.append(std::move(data));
-        return true;
+    if (query.questionCount() == 0)
+        return false;
+
+    // remember the raw query data
+    const auto data = query.data();
+    if (m_queries.contains(data))
+        return false;
+
+    m_queries.append(std::move(data));
+
+    // extract host name and service types queries
+    const auto initialHostNameQueryCount = m_hostNameQueries.count();
+    const auto initialServiceQueryCount = m_serviceQueries.count();
+
+    for (const auto &question: query.questions()) {
+        if (isAddressRecord(question)) {
+            const auto decodedName = decodedHostName(question.name().toByteArray());
+            if (!m_hostNameQueries.contains(decodedName))
+                m_hostNameQueries.append(decodedName);
+        }
+
+        if (isServiceQuery(question)) {
+            const auto decodedName = decodedHostName(question.name().toByteArray());
+            if (!m_serviceQueries.contains(decodedName))
+                m_serviceQueries.append(decodedName);
+        }
     }
 
-    return false;
+    if (initialHostNameQueryCount != m_hostNameQueries.count())
+        emit hostNameQueriesChanged(m_hostNameQueries);
+    if (initialServiceQueryCount != m_serviceQueries.count())
+        emit serviceQueriesChanged(m_serviceQueries);
+
+    emit queriesChanged();
+    return true;
 }
 
 bool Resolver::isOwnMessage(QNetworkDatagram message) const

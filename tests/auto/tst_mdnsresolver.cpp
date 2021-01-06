@@ -3,6 +3,7 @@
  */
 
 // MDNS headers
+#include "mdnsmessage.h"
 #include "mdnsresolver.h"
 
 // Qt headers
@@ -104,7 +105,7 @@ private slots:
         QVERIFY(resolver.lookupHostNames({"alpha"}));
         QVERIFY(resolver.lookupHostNames({"alpha", "beta"}));
         QVERIFY(!resolver.lookupHostNames({"alpha", "beta"}));
-        QVERIFY(resolver.lookupHostNames({"beta"})); // FIXME: do we want to merge this into the previous query?
+        QVERIFY(!resolver.lookupHostNames({"beta"}));
 
         // verify search domain gets removed
         QCOMPARE(resolver.domain(), "local");
@@ -119,12 +120,143 @@ private slots:
         QVERIFY(resolver.lookupServices({"_http._tcp"}));
         QVERIFY(resolver.lookupServices({"_http._tcp", "_ipp._tcp"}));
         QVERIFY(!resolver.lookupServices({"_http._tcp", "_ipp._tcp"}));
-        QVERIFY(resolver.lookupServices({"_ipp._tcp"})); // FIXME: do we want to merge this into the previous query?
+        QVERIFY(!resolver.lookupServices({"_ipp._tcp"}));
 
         // verify search domain gets removed
         QCOMPARE(resolver.domain(), "local");
         QVERIFY(!resolver.lookupServices({"_ipp._tcp.local"}));
         QVERIFY(!resolver.lookupServices({"_ipp._tcp.local."}));
+    }
+
+    void testHostNameQueries()
+    {
+        Resolver resolver;
+        QSignalSpy hostNameQueryChanges{&resolver, &Resolver::hostNameQueriesChanged};
+        QList<QVariantList> expectedHostNameQueryChanges;
+        QStringList expectedHostNameQueries;
+
+        // verify initial state
+        QCOMPARE(resolver.domain(), "local");
+        QCOMPARE(resolver.hostNameQueries(), expectedHostNameQueries);
+        QCOMPARE(hostNameQueryChanges, expectedHostNameQueryChanges);
+
+        // verify that the first query updates the list
+        expectedHostNameQueries += "alpha.local";
+        expectedHostNameQueryChanges += QVariantList{expectedHostNameQueries};
+
+        QVERIFY(resolver.lookupHostNames({"alpha"}));
+        QCOMPARE(resolver.hostNameQueries(), expectedHostNameQueries);
+        QCOMPARE(hostNameQueryChanges, expectedHostNameQueryChanges);
+
+        // verify that repeating the first query doesn't update the list
+        QVERIFY(!resolver.lookupHostNames({"alpha"}));
+        QCOMPARE(resolver.hostNameQueries(), expectedHostNameQueries);
+        QCOMPARE(hostNameQueryChanges, expectedHostNameQueryChanges);
+
+        // verify that a second query also updates the list
+        expectedHostNameQueries += "beta.local";
+        expectedHostNameQueryChanges += QVariantList{expectedHostNameQueries};
+
+        QVERIFY(resolver.lookupHostNames({"alpha", "beta"}));
+        QCOMPARE(resolver.hostNameQueries(), expectedHostNameQueries);
+        QCOMPARE(hostNameQueryChanges, expectedHostNameQueryChanges);
+
+        // verify that repeating the second query doesn't update the list
+        QVERIFY(!resolver.lookupHostNames({"alpha", "beta"}));
+        QCOMPARE(resolver.hostNameQueries(), expectedHostNameQueries);
+        QCOMPARE(hostNameQueryChanges, expectedHostNameQueryChanges);
+
+        // verify that repeating part of the second query doesn't update the list
+        QVERIFY(!resolver.lookupHostNames({"beta"}));
+        QCOMPARE(resolver.hostNameQueries(), expectedHostNameQueries);
+        QCOMPARE(hostNameQueryChanges, expectedHostNameQueryChanges);
+
+        // verify a raw A-record query also updates the list
+        expectedHostNameQueries += "gamma.local";
+        expectedHostNameQueryChanges += QVariantList{expectedHostNameQueries};
+
+        QVERIFY(resolver.lookup(Message{}.addQuestion({"gamma.local", Message::A})));
+        QCOMPARE(resolver.hostNameQueries(), expectedHostNameQueries);
+        QCOMPARE(hostNameQueryChanges, expectedHostNameQueryChanges);
+
+        // verify a raw AAAA-record query also updates the list
+        expectedHostNameQueries += "delta.local";
+        expectedHostNameQueryChanges += QVariantList{expectedHostNameQueries};
+
+        QVERIFY(resolver.lookup(Message{}.addQuestion({"delta.local", Message::AAAA})));
+        QCOMPARE(resolver.hostNameQueries(), expectedHostNameQueries);
+        QCOMPARE(hostNameQueryChanges, expectedHostNameQueryChanges);
+
+        // verify a repeated AAAA-record doesn't update the list
+        expectedHostNameQueries += "epsilon.local";
+        expectedHostNameQueryChanges += QVariantList{expectedHostNameQueries};
+
+        QVERIFY(resolver.lookup(Message{}.addQuestion({"delta.local", Message::AAAA}).
+                                addQuestion({"epsilon.local", Message::AAAA})));
+        QCOMPARE(resolver.hostNameQueries(), expectedHostNameQueries);
+        QCOMPARE(hostNameQueryChanges, expectedHostNameQueryChanges);
+    }
+
+    void testServiceQueries()
+    {
+        Resolver resolver;
+        QSignalSpy serviceQueryChanges{&resolver, &Resolver::serviceQueriesChanged};
+        QList<QVariantList> expectedServiceQueryChanges;
+        QStringList expectedServiceQueries;
+
+        // verify initial state
+        QCOMPARE(resolver.domain(), "local");
+        QCOMPARE(resolver.serviceQueries(), expectedServiceQueries);
+        QCOMPARE(serviceQueryChanges, expectedServiceQueryChanges);
+
+        // verify that the first query updates the list
+        expectedServiceQueries += "_http._tcp.local";
+        expectedServiceQueryChanges += QVariantList{expectedServiceQueries};
+
+        QVERIFY(resolver.lookupServices({"_http._tcp"}));
+        QCOMPARE(resolver.serviceQueries(), expectedServiceQueries);
+        QCOMPARE(serviceQueryChanges, expectedServiceQueryChanges);
+
+        // verify that repeating the first query doesn't update the list
+        QVERIFY(!resolver.lookupServices({"_http._tcp"}));
+        QCOMPARE(resolver.serviceQueries(), expectedServiceQueries);
+        QCOMPARE(serviceQueryChanges, expectedServiceQueryChanges);
+
+        // verify that a second query also updates the list
+        expectedServiceQueries += "_ipp._tcp.local";
+        expectedServiceQueryChanges += QVariantList{expectedServiceQueries};
+
+        QVERIFY(resolver.lookupServices({"_http._tcp", "_ipp._tcp"}));
+        QCOMPARE(resolver.serviceQueries(), expectedServiceQueries);
+        QCOMPARE(serviceQueryChanges, expectedServiceQueryChanges);
+
+        // verify that repeating the second query doesn't update the list
+        QVERIFY(!resolver.lookupServices({"_http._tcp", "_ipp._tcp"}));
+        QCOMPARE(resolver.serviceQueries(), expectedServiceQueries);
+        QCOMPARE(serviceQueryChanges, expectedServiceQueryChanges);
+
+        // verify that repeating part of the second query doesn't update the list
+        QVERIFY(!resolver.lookupServices({"_ipp._tcp"}));
+        QCOMPARE(resolver.serviceQueries(), expectedServiceQueries);
+        QCOMPARE(serviceQueryChanges, expectedServiceQueryChanges);
+
+        // verify a service query also updates the list
+        expectedServiceQueries += "_googlecast._tcp.local";
+        expectedServiceQueryChanges += QVariantList{expectedServiceQueries};
+
+        QVERIFY(resolver.lookup(Message{}.addQuestion({"_googlecast._tcp.local", Message::PTR})));
+        QCOMPARE(resolver.serviceQueries(), expectedServiceQueries);
+        QCOMPARE(serviceQueryChanges, expectedServiceQueryChanges);
+
+        // verify a repeated service query doesn't update the list
+        QVERIFY(!resolver.lookup(Message{}.addQuestion({"_googlecast._tcp.local", Message::PTR})));
+        QCOMPARE(resolver.serviceQueries(), expectedServiceQueries);
+        QCOMPARE(serviceQueryChanges, expectedServiceQueryChanges);
+
+        // verify an IP lookup doesn't update the list
+        QVERIFY(resolver.lookup(Message{}.addQuestion({QHostAddress::LocalHost, Message::PTR})));
+        QCOMPARE(resolver.serviceQueries(), expectedServiceQueries);
+        QCOMPARE(serviceQueryChanges, expectedServiceQueryChanges);
     }
 };
 
