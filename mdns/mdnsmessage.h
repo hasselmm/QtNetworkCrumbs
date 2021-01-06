@@ -158,6 +158,9 @@ public:
         class ConstIterator
         {
         public:
+            using iterator_category = std::forward_iterator_tag;
+            using difference_type = int;
+
             using pointer = T*;
             using reference = T&;
             using value_type = T;
@@ -181,10 +184,11 @@ public:
             : message{message}, lookup{lookup}, count{count} {}
 
         ConstIterator begin() const { return {this, 0}; }
-        ConstIterator end() const { return {this, (message->*count)()}; }
+        ConstIterator end() const { return {this, size()}; }
 
         value_type at(int index) const { return (message->*lookup)(index); }
         value_type operator[](int index) const { return at(index); }
+        auto size() const { return (message->*count)(); }
 
     private:
         const Message *message = {};
