@@ -82,7 +82,7 @@ Resolver::Resolver(QObject *parent)
     , m_domain{"local"}
 {
     createSockets();
-    connect(m_timer, &QTimer::timeout, this, &Resolver::onTimeout);
+    m_timer->callOnTimeout(this, &Resolver::onTimeout);
     QTimer::singleShot(0, this, &Resolver::onTimeout);
     m_timer->start(2s);
 }
