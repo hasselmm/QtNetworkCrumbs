@@ -14,7 +14,7 @@
 
 namespace {
 
-Q_LOGGING_CATEGORY(lcDemo, "mdns.resolver.demo", QtInfoMsg)
+Q_LOGGING_CATEGORY(lcDemo, "mdns.demo.resolver", QtInfoMsg)
 
 class ResolverDemo : public QCoreApplication
 {
