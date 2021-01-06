@@ -273,6 +273,9 @@ public:
     ConstIterator begin() const { return {this, 0}; }
     ConstIterator end() const { return {this, labelCount()}; }
 
+    bool startsWith(const QByteArrayList &prefix) const;
+    bool endsWith(const QByteArrayList &suffix) const;
+
     int size() const;
     int nextOffset() const { return offset() + size(); }
 };

@@ -164,6 +164,33 @@ Label Name::label(int i) const
     return Label{data(), dataOffset};
 }
 
+bool Name::startsWith(const QByteArrayList &prefix) const
+{
+    auto it = prefix.begin();
+    for (const auto &label: *this) {
+        if (it == prefix.end())
+            return true;
+        if (label.toByteArray() != *it++)
+            return false;
+    }
+
+    return it == prefix.end();
+}
+
+bool Name::endsWith(const QByteArrayList &suffix) const
+{
+    auto it = suffix.rbegin();
+
+    for (auto i = labelCount() - 1; i >= 0; --i) {
+        if (it == suffix.rend())
+            return true;
+        if (label(i).toByteArray() != *it++)
+            return false;
+    }
+
+    return it == suffix.rend();
+}
+
 int Name::size() const
 {
     int size = 0;

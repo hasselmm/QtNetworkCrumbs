@@ -432,6 +432,58 @@ private slots:
         QCOMPARE(name.labelCount(), expectedLabelCount);
     }
 
+    void nameStartsWith_data()
+    {
+        QTest::addColumn<QByteArrayList>("prefix");
+        QTest::addColumn<bool>("expectedResult");
+
+        QTest::newRow("empty") << QByteArrayList{} << true;
+        QTest::newRow("host") << QByteArrayList{"host"} << true;
+        QTest::newRow("host.sub") << QByteArrayList{"host", "sub"} << true;
+        QTest::newRow("host.sub.local") << QByteArrayList{"host", "sub", "local"} << true;
+
+        QTest::newRow("local") << QByteArrayList{"local"} << false;
+        QTest::newRow("sub.local") << QByteArrayList{"sub", "local"} << false;
+        QTest::newRow("host.local") << QByteArrayList{"host", "local"} << false;
+        QTest::newRow("host.sub.local.net") << QByteArrayList{"host", "sub", "local", "net"} << false;
+        QTest::newRow("dummy.host.sub.local") << QByteArrayList{"dummy", "host", "sub", "local"} << false;
+    }
+
+    void nameStartsWith()
+    {
+        const Name name{{"\04host\03sub\05local", 16}, 0};
+        const QFETCH(QByteArrayList, prefix);
+        const QFETCH(bool, expectedResult);
+
+        QCOMPARE(name.startsWith(prefix), expectedResult);
+    }
+
+    void nameEndsWith_data()
+    {
+        QTest::addColumn<QByteArrayList>("prefix");
+        QTest::addColumn<bool>("expectedResult");
+
+        QTest::newRow("empty") << QByteArrayList{} << true;
+        QTest::newRow("local") << QByteArrayList{"local"} << true;
+        QTest::newRow("sub.local") << QByteArrayList{"sub", "local"} << true;
+        QTest::newRow("host.sub.local") << QByteArrayList{"host", "sub", "local"} << true;
+
+        QTest::newRow("host") << QByteArrayList{"host"} << false;
+        QTest::newRow("host.sub") << QByteArrayList{"host", "sub"} << false;
+        QTest::newRow("host.local") << QByteArrayList{"host", "local"} << false;
+        QTest::newRow("host.sub.local.net") << QByteArrayList{"host", "sub", "local", "net"} << false;
+        QTest::newRow("dummy.host.sub.local") << QByteArrayList{"dummy", "host", "sub", "local"} << false;
+    }
+
+    void nameEndsWith()
+    {
+        const Name name{{"\04host\03sub\05local", 16}, 0};
+        const QFETCH(QByteArrayList, prefix);
+        const QFETCH(bool, expectedResult);
+
+        QCOMPARE(name.endsWith(prefix), expectedResult);
+    }
+
 private:
     using RecordList = QList<QVariantList>;
 };
