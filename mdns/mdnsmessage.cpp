@@ -38,7 +38,7 @@ auto makeByteArray(QList<Label> labels)
     return data;
 }
 
-auto makeLabelList(QList<QByteArray> strings)
+auto makeLabelList(QByteArrayList strings)
 {
     QList<Label> labels;
 
