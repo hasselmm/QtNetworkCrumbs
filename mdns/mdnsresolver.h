@@ -76,8 +76,8 @@ signals:
 
 private:
     bool isOwnMessage(QNetworkDatagram message) const;
+    QUdpSocket *socketForAddress(QHostAddress address) const;
 
-    void createSockets();
     void scanNetworkInterfaces();
     void submitQueries() const;
 
@@ -89,7 +89,6 @@ private:
 
     QString m_domain;
     QByteArrayList m_queries;
-    QList<QHostAddress> m_ownAddresses;
 };
 
 } // namespace MDNS

@@ -40,6 +40,37 @@ auto multicastGroup(QUdpSocket *socket)
     }
 };
 
+bool isSupportedInterfaceType(QNetworkInterface::InterfaceType type)
+{
+    return type == QNetworkInterface::Ethernet
+            || type == QNetworkInterface::Wifi;
+}
+
+bool isMulticastInterface(const QNetworkInterface &iface)
+{
+    return iface.flags().testFlag(QNetworkInterface::IsRunning)
+            && iface.flags().testFlag(QNetworkInterface::CanMulticast);
+}
+
+bool isSupportedInterface(const QNetworkInterface &iface)
+{
+    return isSupportedInterfaceType(iface.type())
+            && isMulticastInterface(iface);
+}
+
+bool isLinkLocalAddress(const QHostAddress &address)
+{
+    return address.protocol() == QAbstractSocket::IPv4Protocol
+            || address.isLinkLocal();
+}
+
+auto isSocketForAddress(QHostAddress address)
+{
+    return [address = std::move(address)](QUdpSocket *socket) {
+        return socket->localAddress() == address;
+    };
+}
+
 auto normalizedHostName(QByteArray name, QString domain)
 {
     auto normalizedName = QString::fromLatin1(name);
@@ -83,7 +114,6 @@ Resolver::Resolver(QObject *parent)
     , m_timer{new QTimer{this}}
     , m_domain{"local"}
 {
-    createSockets();
     m_timer->callOnTimeout(this, &Resolver::onTimeout);
     QTimer::singleShot(0, this, &Resolver::onTimeout);
     m_timer->start(2s);
@@ -162,72 +192,81 @@ bool Resolver::isOwnMessage(QNetworkDatagram message) const
 {
     if (message.senderPort() != s_mdnsPort)
         return false;
-    if (!m_ownAddresses.contains(message.senderAddress()))
+    if (socketForAddress(message.senderAddress()))
         return false;
 
     return m_queries.contains(message.data());
 }
 
-void Resolver::createSockets()
+QUdpSocket *Resolver::socketForAddress(QHostAddress address) const
 {
-    for (const QHostAddress &address: {QHostAddress::AnyIPv4, QHostAddress::AnyIPv6}) {
-        auto socket = std::make_unique<QUdpSocket>(this);
+    const auto it = std::find_if(m_sockets.begin(), m_sockets.end(), isSocketForAddress(std::move(address)));
+    if (it != m_sockets.end())
+        return *it;
 
-        if (!socket->bind(address, s_mdnsPort, QUdpSocket::ShareAddress | QUdpSocket::ReuseAddressHint)) {
-            qCWarning(lcResolver, "Could not bind mDNS socket to %ls: %ls",
-                      qUtf16Printable(address.toString()),
-                      qUtf16Printable(socket->errorString()));
-            continue;
-        }
-
-        connect(socket.get(), &QUdpSocket::readyRead,
-                this, [this, socket = socket.get()] {
-            onReadyRead(socket);
-        });
-
-        m_sockets.append(socket.release());
-    }
+    return nullptr;
 }
 
 void Resolver::scanNetworkInterfaces()
 {
-    const auto isSupportedType = [](const auto type) {
-        return type == QNetworkInterface::Ethernet
-                || type == QNetworkInterface::Wifi;
-    };
-
-    const auto hasMulticastFlags = [](const auto flags) {
-        return flags.testFlag(QNetworkInterface::IsRunning)
-                && flags.testFlag(QNetworkInterface::CanMulticast);
-    };
-
-    QList<QHostAddress> ownAddresses;
+    QList<QUdpSocket *> newSocketList;
 
     const auto allInterfaces = QNetworkInterface::allInterfaces();
     for (const auto &iface: allInterfaces) {
-        if (isSupportedType(iface.type())
-                && hasMulticastFlags(iface.flags())) {
-            const auto allAddresses = iface.allAddresses();
-            for (const auto &address: allAddresses) {
-                if (!ownAddresses.contains(address))
-                    ownAddresses.append(address);
+        if (!isSupportedInterface(iface))
+            continue;
+
+        const auto addressEntries = iface.addressEntries();
+        for (const auto &entry: addressEntries) {
+            if (!isLinkLocalAddress(entry.ip()))
+                continue;
+
+            if (const auto socket = socketForAddress(entry.ip())) {
+                newSocketList.append(socket);
+                continue;
             }
 
-            for (const auto socket: qAsConst(m_sockets)) {
-                const auto group = multicastGroup(socket);
-                if (socket->joinMulticastGroup(group, iface)) {
-                    qCDebug(lcResolver, "Multicast group %ls joined",
-                            qUtf16Printable(group.toString()));
-                } else if (socket->error() != QUdpSocket::UnknownSocketError) {
-                    qCWarning(lcResolver, "Could not join multicast group %ls: %ls",
-                              qUtf16Printable(group.toString()),
-                              qUtf16Printable(socket->errorString()));
-                }
+            qCInfo(lcResolver) << "Creating socket for" << entry.ip();
+            auto socket = std::make_unique<QUdpSocket>(this);
+
+            if (!socket->bind(entry.ip(), s_mdnsPort, QUdpSocket::ShareAddress | QUdpSocket::ReuseAddressHint)) {
+                qCWarning(lcResolver, "Could not bind mDNS socket to %ls: %ls",
+                          qUtf16Printable(entry.ip().toString()),
+                          qUtf16Printable(socket->errorString()));
+                continue;
             }
+
+            const auto group = multicastGroup(socket.get());
+            if (socket->joinMulticastGroup(group, iface)) {
+                qCDebug(lcResolver, "Multicast group %ls joined on %ls",
+                        qUtf16Printable(group.toString()),
+                        qUtf16Printable(iface.name()));
+            } else if (socket->error() != QUdpSocket::UnknownSocketError) {
+                qCWarning(lcResolver, "Could not join multicast group %ls on %ls: %ls",
+                          qUtf16Printable(group.toString()),
+                          qUtf16Printable(iface.name()),
+                          qUtf16Printable(socket->errorString()));
+                continue;
+            }
+
+            connect(socket.get(), &QUdpSocket::readyRead,
+                    this, [this, socket = socket.get()] {
+                onReadyRead(socket);
+            });
+
+            socket->setMulticastInterface(iface);
+            newSocketList.append(socket.release());
         }
     }
 
-    m_ownAddresses = std::move(ownAddresses);
+    const auto oldSocketList = std::exchange(m_sockets, newSocketList);
+    for (const auto socket: oldSocketList) {
+        if (!m_sockets.contains(socket)) {
+            qCDebug(lcResolver, "Destroying socket for address %ls",
+                    qUtf16Printable(socket->localAddress().toString()));
+            delete socket;
+        }
+    }
 }
 
 void Resolver::submitQueries() const
