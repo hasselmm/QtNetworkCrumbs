@@ -158,7 +158,7 @@ int Resolver::interval() const
 
 bool Resolver::lookupHostNames(QStringList hostNames)
 {
-    MDNS::Message message;
+    auto message = MDNS::Message{};
 
     for (const auto &name: hostNames) {
         message.addQuestion({qualifiedHostName(name, m_domain).toLatin1(), MDNS::Message::A});
@@ -170,7 +170,7 @@ bool Resolver::lookupHostNames(QStringList hostNames)
 
 bool Resolver::lookupServices(QStringList serviceTypes)
 {
-    MDNS::Message message;
+    auto message = MDNS::Message{};
 
     for (const auto &type: serviceTypes)
         message.addQuestion({qualifiedHostName(type, m_domain).toLatin1(), MDNS::Message::PTR});
@@ -209,7 +209,7 @@ QUdpSocket *Resolver::socketForAddress(QHostAddress address) const
 
 void Resolver::scanNetworkInterfaces()
 {
-    QList<QUdpSocket *> newSocketList;
+    auto newSocketList = QList<QUdpSocket *>{};
 
     const auto allInterfaces = QNetworkInterface::allInterfaces();
     for (const auto &iface: allInterfaces) {
@@ -283,13 +283,13 @@ void Resolver::onReadyRead(QUdpSocket *socket)
 {
     while (socket->hasPendingDatagrams()) {
         if (const auto received = socket->receiveDatagram(); !isOwnMessage(received)) {
-            const MDNS::Message message{received.data()};
+            const auto message = MDNS::Message{received.data()};
 
-            std::unordered_map<QByteArray, QList<QHostAddress>> resolvedAddresses;
-            std::unordered_map<QByteArray, ServiceRecord> resolvedServices;
-            std::unordered_map<QByteArray, QByteArray> resolvedText;
+            auto resolvedAddresses = std::unordered_map<QByteArray, QList<QHostAddress>>{};
+            auto resolvedServices = std::unordered_map<QByteArray, ServiceRecord>{};
+            auto resolvedText = std::unordered_map<QByteArray, QByteArray>{};
 
-            for (int i = 0; i < message.responseCount(); ++i) {
+            for (auto i = 0; i < message.responseCount(); ++i) {
                 const auto response = message.response(i);
 
                 if (const auto address = response.address(); !address.isNull()) {
@@ -323,7 +323,7 @@ void Resolver::onTimeout()
 
 QDebug operator<<(QDebug debug, const MDNS::ServiceDescription &service)
 {
-    const QDebugStateSaver saver{debug};
+    const auto saver = QDebugStateSaver{debug};
 
     if (debug.verbosity() >= QDebug::DefaultVerbosity)
         debug.nospace() << service.staticMetaObject.className();

@@ -35,9 +35,9 @@ public:
 private slots:
     void domainProperty()
     {
-        Resolver resolver;
-        QSignalSpy domainChanges{&resolver, &Resolver::domainChanged};
-        QList<QVariantList> expectedDomainChanges;
+        auto resolver = Resolver{};
+        auto domainChanges = QSignalSpy{&resolver, &Resolver::domainChanged};
+        auto expectedDomainChanges = QList<QVariantList>{};
 
         QCOMPARE(resolver.domain(), "local");
         QCOMPARE(domainChanges, expectedDomainChanges);
@@ -62,9 +62,9 @@ private slots:
 
     void intervalProperty()
     {
-        Resolver resolver;
-        QSignalSpy intervalChanges{&resolver, &Resolver::intervalChanged};
-        QList<QVariantList> expectedIntervalChanges;
+        auto resolver = Resolver{};
+        auto intervalChanges = QSignalSpy{&resolver, &Resolver::intervalChanged};
+        auto expectedIntervalChanges = QList<QVariantList>{};
 
         QCOMPARE(resolver.interval(), 2000);
         QCOMPARE(resolver.intervalAsDuration(), 2s);
@@ -99,7 +99,7 @@ private slots:
 
     void lookupHostNames()
     {
-        Resolver resolver;
+        auto resolver = Resolver{};
 
         QVERIFY(resolver.lookupHostNames({"alpha"}));
         QVERIFY(resolver.lookupHostNames({"alpha", "beta"}));
@@ -114,7 +114,7 @@ private slots:
 
     void lookupServices()
     {
-        Resolver resolver;
+        auto resolver = Resolver{};
 
         QVERIFY(resolver.lookupServices({"_http._tcp"}));
         QVERIFY(resolver.lookupServices({"_http._tcp", "_ipp._tcp"}));

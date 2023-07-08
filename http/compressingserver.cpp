@@ -42,11 +42,11 @@ int CompressingServer::run()
 
             if (request.startsWith("GET /")) {
                 const auto gzip = request.startsWith("GET /gzip");
-                const QByteArray content = "Hello World! How are you?";
+                const auto content = QByteArray{"Hello World! How are you?"};
                 auto compressed = qCompress(content);
 
                 if (gzip) {
-                    QByteArray trailer{8, Qt::Uninitialized};
+                    auto trailer = QByteArray{8, Qt::Uninitialized};
                     const auto length = static_cast<uint>(content.length());
                     const auto checksum = crc32(0, reinterpret_cast<const quint8 *>(content.constData()), length);
 
