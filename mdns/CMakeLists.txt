@@ -6,7 +6,7 @@ add_library(MDNSResolver STATIC
     )
 
 target_include_directories(MDNSResolver PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
-target_link_libraries(MDNSResolver PUBLIC Qt5::Network)
+target_link_libraries(MDNSResolver PUBLIC Qt::Network)
 
 target_compile_definitions(MDNSResolver PRIVATE
     -DQT_DISABLE_DEPRECATED_BEFORE=0x050f00

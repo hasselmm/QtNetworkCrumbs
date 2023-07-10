@@ -8,7 +8,7 @@ endif()
 
 function(add_testcase NAME)
     add_executable(${NAME} ${NAME}.cpp)
-    target_link_libraries(${NAME} PRIVATE MDNSResolver Qt5::Test)
+    target_link_libraries(${NAME} PRIVATE MDNSResolver Qt::Test)
 
     set_target_properties(${NAME} PROPERTIES
         MACOSX_BUNDLE "de.taschenorakel.qnc.${NAME}"
