@@ -118,15 +118,8 @@ jobs:
         working-directory: ${{runner.workspace}}/build
         run: cmake --build . --config Release
 
-      - name: Test
-        if: (matrix.configuration.target || 'desktop') == 'desktop'
-        working-directory: ${{runner.workspace}}/build
-        run: |
-          ctest -C Release --output-on-failure
-
-      - uses: actions/upload-artifact@v3
+      - uses: ./.github/workflows/ctest.yaml
         if: (matrix.configuration.target || 'desktop') == 'desktop'
         with:
-          name: ctest-qt${{matrix.qt-version}}-${{matrix.configuration.id}}
-          path: |
-            ${{runner.workspace}}/build/Testing/Temporary/LastTest.log
+          artifact-name: ctest-qt${{matrix.qt-version}}-${{matrix.configuration.id}}
+          working-directory: ${{runner.workspace}}/build

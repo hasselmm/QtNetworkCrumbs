@@ -1,0 +1,28 @@
+name: Automated Tests
+
+on:
+  workflow_call:
+    inputs:
+      artifact-name:
+        required: true
+        type: string
+
+      working-directory:
+        required: true
+        type: string
+
+      build-type:
+        default: 'Release'
+        type: string
+
+jobs:
+  ctest:
+    steps:
+    - name: Test
+      working-directory: $${inputs.working-directory}
+      run: ctest -C $${inputs.build-type}} --output-on-failure
+
+    - uses: actions/upload-artifact@v3
+      with:
+        name: $${artifact-name}}
+        path: $${inputs.working-directory}/Testing/Temporary/LastTest.log
