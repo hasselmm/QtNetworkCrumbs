@@ -1,0 +1,4 @@
+@echo off
+
+set PATH=${CXX_RUNTIME_BINDIR};%PATH%
+%*
