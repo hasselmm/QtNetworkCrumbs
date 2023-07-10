@@ -294,7 +294,7 @@ private slots:
             auto expectedFields = expectedRecords.takeFirst();
 
             QVERIFY(!expectedFields.isEmpty());
-            QCOMPARE(question.name().toByteArray(), expectedFields.takeFirst());
+            QCOMPARE(question.name().toByteArray(), expectedFields.takeFirst().toByteArray());
 
             QVERIFY(!expectedFields.isEmpty());
             QCOMPARE(question.type(), expectedFields.takeFirst());
@@ -313,7 +313,7 @@ private slots:
             auto expectedFields = expectedRecords.takeFirst();
 
             QVERIFY(!expectedFields.isEmpty());
-            QCOMPARE(resource.name().toByteArray(), expectedFields.takeFirst());
+            QCOMPARE(resource.name().toByteArray(), expectedFields.takeFirst().toByteArray());
 
             QVERIFY(!expectedFields.isEmpty());
             QCOMPARE(resource.type(), expectedFields.takeFirst());
@@ -336,7 +336,7 @@ private slots:
 
             case Message::PTR:
                 QVERIFY(!expectedFields.isEmpty());
-                QCOMPARE(resource.pointer().toByteArray(), expectedFields.takeFirst());
+                QCOMPARE(resource.pointer().toByteArray(), expectedFields.takeFirst().toByteArray());
                 break;
 
             case Message::SRV:
@@ -350,7 +350,7 @@ private slots:
                 QCOMPARE(resource.service().port(), expectedFields.takeFirst());
 
                 QVERIFY(!expectedFields.isEmpty());
-                QCOMPARE(resource.service().target().toByteArray(), expectedFields.takeFirst());
+                QCOMPARE(resource.service().target().toByteArray(), expectedFields.takeFirst().toByteArray());
                 break;
 
             default:

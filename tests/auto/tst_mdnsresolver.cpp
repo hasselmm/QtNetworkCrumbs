@@ -78,7 +78,7 @@ private slots:
 
         resolver.setInterval(3s);
 
-        expectedIntervalChanges += {3000};
+        expectedIntervalChanges += QVariantList{3000};
         QCOMPARE(resolver.interval(), 3000);
         QCOMPARE(resolver.intervalAsDuration(), 3s);
         QCOMPARE(intervalChanges, expectedIntervalChanges);
@@ -91,7 +91,7 @@ private slots:
 
         resolver.setInterval(3500);
 
-        expectedIntervalChanges += {3500};
+        expectedIntervalChanges += QVariantList{3500};
         QCOMPARE(resolver.interval(), 3500);
         QCOMPARE(resolver.intervalAsDuration(), 3500ms);
         QCOMPARE(intervalChanges, expectedIntervalChanges);

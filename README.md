@@ -10,7 +10,7 @@ This are some tiny networking toys written in C++17 for [Qt](https://qt.io).
 ## What's needed?
 
 - [CMake 3.10](https://cmake.org/)
-- [Qt 5.15](https://qt.io)
+- [Qt 6.5](https://qt.io), or Qt 5.15
 - C++17
 
 ## What's supported?
@@ -22,5 +22,5 @@ Android, iOS, Linux, macOS, Windows.
 
 ---
 
-Copyright (C) 2019-2021 Mathias Hasselmann
+Copyright (C) 2019-2023 Mathias Hasselmann
 Licensed under MIT License
