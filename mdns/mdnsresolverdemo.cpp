@@ -3,6 +3,7 @@
  */
 
 // MDNS headers
+#include "mdnsliterals.h"
 #include "mdnsmessage.h"
 #include "mdnsresolver.h"
 
@@ -12,6 +13,7 @@
 #include <QHostAddress>
 #include <QLoggingCategory>
 
+namespace MDNS::Demo {
 namespace {
 
 Q_LOGGING_CATEGORY(lcDemo, "mdns.demo.resolver", QtInfoMsg)
@@ -43,16 +45,17 @@ public:
                     << "message received:" << message;
         });
 
-        resolver->lookupServices({"_http._tcp", "_xpresstrain._tcp", "_googlecast._tcp"});
-        resolver->lookupHostNames({"juicifer", "android"});
+        resolver->lookupServices({"_http._tcp"_l1, "_xpresstrain._tcp"_l1, "_googlecast._tcp"_l1});
+        resolver->lookupHostNames({"juicifer"_l1, "android"_l1});
 
         return exec();
     }
 };
 
 } // namespace
+} // namespace MDNS::Demo
 
 int main(int argc, char *argv[])
 {
-    return ResolverDemo{argc, argv}.run();
+    return MDNS::Demo::ResolverDemo{argc, argv}.run();
 }

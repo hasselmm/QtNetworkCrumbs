@@ -4,6 +4,7 @@
 #include "mdnsresolver.h"
 
 // MDNS headers
+#include "mdnsliterals.h"
 #include "mdnsmessage.h"
 
 // Qt headers
@@ -25,19 +26,25 @@ using namespace std::chrono_literals;
 
 Q_LOGGING_CATEGORY(lcResolver, "mdns.resolver")
 
+constexpr auto s_mdnsUnicastIPv4 = "224.0.0.251"_l1;
+constexpr auto s_mdnsUnicastIPv6 = "ff02::fb"_l1;
 constexpr auto s_mdnsPort = 5353;
 
 auto multicastGroup(QUdpSocket *socket)
 {
     switch (socket->localAddress().protocol()) {
     case QUdpSocket::IPv4Protocol:
-        return QHostAddress{"224.0.0.251"};
+        return QHostAddress{s_mdnsUnicastIPv4};
     case QUdpSocket::IPv6Protocol:
-        return QHostAddress{"ff02::fb"};
-    default:
-        Q_UNREACHABLE();
-        return QHostAddress{};
+        return QHostAddress{s_mdnsUnicastIPv6};
+
+    case QUdpSocket::AnyIPProtocol:
+    case QUdpSocket::UnknownNetworkLayerProtocol:
+        break;
     }
+
+    Q_UNREACHABLE();
+    return QHostAddress{};
 };
 
 bool isSupportedInterfaceType(QNetworkInterface::InterfaceType type)
@@ -75,9 +82,9 @@ auto normalizedHostName(QByteArray name, QString domain)
 {
     auto normalizedName = QString::fromLatin1(name);
 
-    if (normalizedName.endsWith('.'))
+    if (normalizedName.endsWith('.'_l1))
         normalizedName.truncate(normalizedName.length() - 1);
-    if (normalizedName.endsWith('.' + domain))
+    if (normalizedName.endsWith('.'_l1 + domain))
         normalizedName.truncate(normalizedName.length() - domain.length() - 1);
 
     return normalizedName;
@@ -85,9 +92,9 @@ auto normalizedHostName(QByteArray name, QString domain)
 
 auto qualifiedHostName(QString name, QString domain)
 {
-    if (name.endsWith('.'))
+    if (name.endsWith('.'_l1))
         name.truncate(name.length() - 1);
-    else if (const auto domainSuffix = '.' + domain; !name.endsWith(domainSuffix))
+    else if (const auto domainSuffix = '.'_l1 + domain; !name.endsWith(domainSuffix))
         name.append(domainSuffix);
 
     return name;
@@ -103,7 +110,7 @@ ServiceDescription::ServiceDescription(QString domain, QByteArray name, ServiceR
     , m_weight{service.weight()}
     , m_info{std::move(info)}
 {
-    if (const auto separator = m_name.indexOf('.'); separator >= 0) {
+    if (const auto separator = m_name.indexOf('.'_l1); separator >= 0) {
         m_type = m_name.mid(separator + 1);
         m_name.truncate(separator);
     }
@@ -112,7 +119,7 @@ ServiceDescription::ServiceDescription(QString domain, QByteArray name, ServiceR
 Resolver::Resolver(QObject *parent)
     : QObject{parent}
     , m_timer{new QTimer{this}}
-    , m_domain{"local"}
+    , m_domain{"local"_l1}
 {
     m_timer->callOnTimeout(this, &Resolver::onTimeout);
     QTimer::singleShot(0, this, &Resolver::onTimeout);
