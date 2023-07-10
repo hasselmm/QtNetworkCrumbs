@@ -1,4 +1,6 @@
 add_library(MDNSResolver STATIC
+    mdnsliterals.h
+    mdnsliterals.cpp
     mdnsmessage.cpp
     mdnsmessage.h
     mdnsresolver.cpp
@@ -10,7 +12,7 @@ target_link_libraries(MDNSResolver PUBLIC Qt::Network)
 
 target_compile_definitions(MDNSResolver PRIVATE
     -DQT_DISABLE_DEPRECATED_BEFORE=0x050f00
-    -DQT_RESTRICTED_CAST_FROM_ASCII=1
+    -DQT_NO_CAST_FROM_ASCII=1
     -DQT_NO_URL_CAST_FROM_STRING=1
     )
 
