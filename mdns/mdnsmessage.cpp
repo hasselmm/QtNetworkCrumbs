@@ -30,7 +30,7 @@ auto readUInt32(const char *p)
 
 auto makeByteArray(QList<Label> labels)
 {
-    QByteArray data;
+    auto data = QByteArray{};
 
     for (const auto &l: labels)
         data.append(l.data());
@@ -40,7 +40,7 @@ auto makeByteArray(QList<Label> labels)
 
 auto makeLabelList(QByteArrayList strings)
 {
-    QList<Label> labels;
+    auto labels = QList<Label>{};
 
     for (const auto &s: strings) {
         Q_ASSERT(s.length() > 0);
@@ -130,7 +130,7 @@ Name::Name(QHostAddress address)
 
 QByteArray Name::toByteArray() const
 {
-    QByteArray name;
+    auto name = QByteArray{};
 
     for (const auto &label: *this) {
         if (!name.isEmpty())
@@ -149,8 +149,9 @@ QByteArray Name::toByteArray() const
 
 int Name::labelCount() const
 {
-    for (int i = 0;; ++i) {
+    for (auto i = 0;; ++i) {
         const auto l = label(i);
+
         if (l.isPointer())
             return i + 1;
         if (label(i).labelLength() == 0)
@@ -167,6 +168,7 @@ Label Name::label(int i) const
 bool Name::startsWith(const QByteArrayList &prefix) const
 {
     auto it = prefix.begin();
+
     for (const auto &label: *this) {
         if (it == prefix.end())
             return true;
@@ -193,9 +195,9 @@ bool Name::endsWith(const QByteArrayList &suffix) const
 
 int Name::size() const
 {
-    int size = 0;
+    auto size = 0;
 
-    for (int i = 0;; ++i) {
+    for (auto i = 0;; ++i) {
         const auto l = label(i);
         size += l.size();
 
@@ -374,7 +376,7 @@ QDebug operator<<(QDebug debug, const MDNS::Label &label)
 
 QDebug operator<<(QDebug debug, const MDNS::Message &message)
 {
-    const QDebugStateSaver saver{debug};
+    const auto saver = QDebugStateSaver{debug};
 
     if (debug.verbosity() >= QDebug::DefaultVerbosity)
         debug.nospace() << message.staticMetaObject.className();
@@ -426,7 +428,7 @@ QDebug operator<<(QDebug debug, const MDNS::Name &name)
 
 QDebug operator<<(QDebug debug, const MDNS::Question &question)
 {
-    const QDebugStateSaver saver{debug};
+    const auto saver = QDebugStateSaver{debug};
 
     if (debug.verbosity() >= QDebug::DefaultVerbosity)
         debug.nospace() << question.staticMetaObject.className();
@@ -446,7 +448,7 @@ QDebug operator<<(QDebug debug, const MDNS::Question &question)
 
 QDebug operator<<(QDebug debug, const MDNS::Resource &resource)
 {
-    const QDebugStateSaver saver{debug};
+    const auto saver = QDebugStateSaver{debug};
 
     if (debug.verbosity() >= QDebug::DefaultVerbosity)
         debug.nospace() << resource.staticMetaObject.className();
@@ -495,7 +497,7 @@ QDebug operator<<(QDebug debug, const MDNS::Resource &resource)
 
 QDebug operator<<(QDebug debug, const MDNS::ServiceRecord &service)
 {
-    const QDebugStateSaver saver{debug};
+    const auto saver = QDebugStateSaver{debug};
 
     if (debug.verbosity() >= QDebug::DefaultVerbosity)
         debug.nospace() << service.staticMetaObject.className();

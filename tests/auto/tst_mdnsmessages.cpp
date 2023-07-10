@@ -279,7 +279,7 @@ private slots:
         QFETCH(QList<QVariantList>, expectedRecords);
 
         QVERIFY(!data.isEmpty());
-        const Message message{data};
+        const auto message = Message{data};
 
         QCOMPARE(expectedHeaders.size(), 6);
         QCOMPARE(message.serial(), expectedHeaders[0]);
@@ -451,7 +451,7 @@ private slots:
 
     void nameStartsWith()
     {
-        const Name name{{"\04host\03sub\05local", 16}, 0};
+        const auto name = Name{{"\04host\03sub\05local", 16}, 0};
         const QFETCH(QByteArrayList, prefix);
         const QFETCH(bool, expectedResult);
 
