@@ -38,10 +38,13 @@ auto multicastGroup(QUdpSocket *socket)
     case QUdpSocket::IPv6Protocol:
         return QHostAddress{s_mdnsUnicastIPv6};
 
-    default:
-        Q_UNREACHABLE();
-        return QHostAddress{};
+    case QUdpSocket::AnyIPProtocol:
+    case QUdpSocket::UnknownNetworkLayerProtocol:
+        break;
     }
+
+    Q_UNREACHABLE();
+    return QHostAddress{};
 };
 
 bool isSupportedInterfaceType(QNetworkInterface::InterfaceType type)
