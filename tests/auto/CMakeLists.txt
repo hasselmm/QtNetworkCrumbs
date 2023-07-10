@@ -6,8 +6,6 @@ else()
     unset(TEST_RUNNER)
 endif()
 
-message(STATUS "TEST_RUNNER: ${TEST_RUNNER}")
-
 function(add_testcase NAME)
     add_executable(${NAME} ${NAME}.cpp)
     target_link_libraries(${NAME} PRIVATE MDNSResolver Qt5::Test)
