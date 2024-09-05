@@ -8,6 +8,7 @@ endif()
 
 function(add_testcase NAME)
     add_executable(${NAME} ${NAME}.cpp)
+    target_compile_options(${NAME} PRIVATE ${QNC_COMPILE_OPTIONS})
     target_link_libraries(${NAME} PRIVATE MDNSResolver Qt::Test)
 
     set_target_properties(${NAME} PROPERTIES

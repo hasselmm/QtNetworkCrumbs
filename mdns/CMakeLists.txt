@@ -8,6 +8,7 @@ add_library(MDNSResolver STATIC
     )
 
 target_include_directories(MDNSResolver PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_compile_options(MDNSResolver PRIVATE ${QNC_COMPILE_OPTIONS})
 target_link_libraries(MDNSResolver PUBLIC Qt::Network)
 
 target_compile_definitions(MDNSResolver PRIVATE

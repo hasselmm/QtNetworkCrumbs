@@ -1,5 +1,6 @@
 if (NOT IOS) # FIXME Figure out code signing on Github
     add_executable(HttpCompressingServer compressingserver.cpp)
+    target_compile_options(HttpCompressingServer PRIVATE ${QNC_COMPILE_OPTIONS})
     target_link_libraries(HttpCompressingServer PUBLIC Qt::Network QtNetworkCrumbs::Zlib)
 
     set_target_properties(HttpCompressingServer PROPERTIES
