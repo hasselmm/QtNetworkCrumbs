@@ -9,15 +9,23 @@
 namespace MDNS {
 namespace literals {
 
-constexpr auto operator ""_l1(const char ch)
+#if QT_VERSION >= QT_VERSION_CHECK(6,4,0)
+
+using namespace Qt::StringLiterals;
+
+#else // QT_VERSION_CHECK(6,4,0)
+
+constexpr auto operator ""_L1(const char ch)
 {
     return QLatin1Char{ch};
 }
 
-constexpr auto operator ""_l1(const char *str, size_t len)
+constexpr auto operator ""_L1(const char *str, size_t len)
 {
     return QLatin1String{str, static_cast<int>(len)};
 }
+
+#endif // QT_VERSION_CHECK(6,4,0)
 
 } // namespace literals
 

@@ -45,8 +45,8 @@ public:
                     << "message received:" << message;
         });
 
-        resolver->lookupServices({"_http._tcp"_l1, "_xpresstrain._tcp"_l1, "_googlecast._tcp"_l1});
-        resolver->lookupHostNames({"juicifer"_l1, "android"_l1});
+        resolver->lookupServices({"_http._tcp"_L1, "_xpresstrain._tcp"_L1, "_googlecast._tcp"_L1});
+        resolver->lookupHostNames({"juicifer"_L1, "android"_L1});
 
         return exec();
     }
