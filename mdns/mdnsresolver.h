@@ -21,7 +21,7 @@ class ServiceDescription
     Q_GADGET
 
 public:
-    ServiceDescription(QString domain, QByteArray name, ServiceRecord service, QByteArray info);
+    ServiceDescription(QString domain, QByteArray name, ServiceRecord service, QStringList info);
 
     auto name() const { return m_name; };
     auto type() const { return m_type; }
@@ -40,7 +40,7 @@ private:
     int m_priority;
     int m_weight;
 
-    QByteArray m_info;
+    QStringList m_info;
 };
 
 class Resolver : public QObject

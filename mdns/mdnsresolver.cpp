@@ -100,9 +100,32 @@ auto qualifiedHostName(QString name, QString domain)
     return name;
 }
 
+auto parseTxtRecord(const QByteArray &txtRecord)
+{
+    auto stringList = QStringList{};
+
+    const auto first = txtRecord.cbegin();
+    const auto last = txtRecord.cend();
+
+    for (auto it = first; it < last; ) {
+        const auto length = static_cast<int>(static_cast<quint8>(*it));
+
+        if (it + length >= last) {
+            qCWarning(lcResolver, "Malformed TXT record at offset");
+            break;
+        }
+
+        ++it;
+        stringList += QString::fromUtf8(++it, length);
+        it += length;
+    }
+
+    return stringList;
 }
 
-ServiceDescription::ServiceDescription(QString domain, QByteArray name, ServiceRecord service, QByteArray info)
+} // namespace
+
+ServiceDescription::ServiceDescription(QString domain, QByteArray name, ServiceRecord service, QStringList info)
     : m_name{normalizedHostName(name, domain)}
     , m_target{normalizedHostName(service.target().toByteArray(), domain)}
     , m_port{service.port()}
@@ -310,8 +333,11 @@ void Resolver::onReadyRead(QUdpSocket *socket)
                 }
             }
 
-            for (const auto &[name, service]: resolvedServices)
-                emit serviceResolved({m_domain, name, service, resolvedText[name]});
+            for (const auto &[name, service]: resolvedServices) {
+                auto info = parseTxtRecord(resolvedText[name]);
+                emit serviceResolved({m_domain, name, service, std::move(info)});
+            }
+
             for (const auto &[name, addresses]: resolvedAddresses)
                 emit hostNameResolved(normalizedHostName(name, m_domain), addresses);
 
