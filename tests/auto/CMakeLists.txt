@@ -11,7 +11,8 @@ function(add_testcase NAME)
     target_compile_options(${NAME} PRIVATE ${QNC_COMPILE_OPTIONS})
     target_link_libraries(${NAME} PRIVATE MDNSResolver Qt::Test)
 
-    set_target_properties(${NAME} PROPERTIES
+    set_target_properties(
+        ${NAME} PROPERTIES
         MACOSX_BUNDLE "de.taschenorakel.qnc.${NAME}"
         XCODE_PRODUCT_TYPE "com.apple.product-type.bundle.unit-test")
 
