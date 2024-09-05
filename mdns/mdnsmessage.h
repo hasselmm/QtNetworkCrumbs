@@ -9,7 +9,7 @@
 
 class QHostAddress;
 
-namespace MDNS {
+namespace qnc::mdns {
 
 class Question;
 class Resource;
@@ -360,13 +360,13 @@ public:
     int nextOffset() const { return offset() + size(); }
 };
 
-} // namespace MDNS
+} // namespace qnc::mdns
 
-QDebug operator<<(QDebug, const MDNS::Label &);
-QDebug operator<<(QDebug, const MDNS::Message &);
-QDebug operator<<(QDebug, const MDNS::Name &);
-QDebug operator<<(QDebug, const MDNS::Question &);
-QDebug operator<<(QDebug, const MDNS::Resource &);
-QDebug operator<<(QDebug, const MDNS::ServiceRecord &);
+QDebug operator<<(QDebug, const qnc::mdns::Label &);
+QDebug operator<<(QDebug, const qnc::mdns::Message &);
+QDebug operator<<(QDebug, const qnc::mdns::Name &);
+QDebug operator<<(QDebug, const qnc::mdns::Question &);
+QDebug operator<<(QDebug, const qnc::mdns::Resource &);
+QDebug operator<<(QDebug, const qnc::mdns::ServiceRecord &);
 
 #endif // MDNS_MDNSMESSAGE_H

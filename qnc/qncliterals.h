@@ -1,12 +1,12 @@
 /* QtNetworkCrumbs - Some networking toys for Qt
  * Copyright (C) 2023 Mathias Hasselmann
  */
-#ifndef MDNS_MDNSLITERALS_H
-#define MDNS_MDNSLITERALS_H
+#ifndef QNC_QNCLITERALS_H
+#define QNC_QNCLITERALS_H
 
 #include <QString>
 
-namespace MDNS {
+namespace qnc {
 namespace literals {
 
 #if QT_VERSION >= QT_VERSION_CHECK(6,4,0)
@@ -31,6 +31,6 @@ constexpr auto operator ""_L1(const char *str, size_t len)
 
 using namespace literals;
 
-} // namespace MDNS
+} // namespace qnc
 
-#endif // MDNS_MDNSLITERALS_H
+#endif // QNC_QNCLITERALS_H

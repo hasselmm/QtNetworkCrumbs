@@ -1,7 +1,5 @@
 add_library(
     MDNSResolver STATIC
-    mdnsliterals.h
-    mdnsliterals.cpp
     mdnsmessage.cpp
     mdnsmessage.h
     mdnsresolver.cpp
@@ -10,7 +8,7 @@ add_library(
 
 target_include_directories(MDNSResolver PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_compile_options(MDNSResolver PRIVATE ${QNC_COMPILE_OPTIONS})
-target_link_libraries(MDNSResolver PUBLIC Qt::Network)
+target_link_libraries(MDNSResolver PUBLIC QtNetworkCrumbs)
 
 target_compile_definitions(
     MDNSResolver PRIVATE

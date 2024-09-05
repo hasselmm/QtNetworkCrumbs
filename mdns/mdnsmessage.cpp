@@ -9,7 +9,7 @@
 
 #include <QtEndian>
 
-namespace MDNS {
+namespace qnc::mdns {
 
 namespace {
 
@@ -367,14 +367,14 @@ void Message::setU16(int offset, quint16 value)
     writeUInt16(m_data.data() + offset, value);
 }
 
-} // namespace MDNS
+} // namespace qnc::mdns
 
-QDebug operator<<(QDebug debug, const MDNS::Label &label)
+QDebug operator<<(QDebug debug, const qnc::mdns::Label &label)
 {
     return debug << label.toByteArray();
 }
 
-QDebug operator<<(QDebug debug, const MDNS::Message &message)
+QDebug operator<<(QDebug debug, const qnc::mdns::Message &message)
 {
     const auto saver = QDebugStateSaver{debug};
 
@@ -421,12 +421,12 @@ QDebug operator<<(QDebug debug, const MDNS::Message &message)
     return debug;
 }
 
-QDebug operator<<(QDebug debug, const MDNS::Name &name)
+QDebug operator<<(QDebug debug, const qnc::mdns::Name &name)
 {
     return debug << name.toByteArray();
 }
 
-QDebug operator<<(QDebug debug, const MDNS::Question &question)
+QDebug operator<<(QDebug debug, const qnc::mdns::Question &question)
 {
     const auto saver = QDebugStateSaver{debug};
 
@@ -446,7 +446,7 @@ QDebug operator<<(QDebug debug, const MDNS::Question &question)
     return debug << ")";
 }
 
-QDebug operator<<(QDebug debug, const MDNS::Resource &resource)
+QDebug operator<<(QDebug debug, const qnc::mdns::Resource &resource)
 {
     const auto saver = QDebugStateSaver{debug};
 
@@ -462,29 +462,29 @@ QDebug operator<<(QDebug debug, const MDNS::Resource &resource)
             << ", dataSize=" << resource.dataSize();
 
     switch (resource.type()) {
-    case MDNS::Message::A:
-    case MDNS::Message::AAAA:
+    case qnc::mdns::Message::A:
+    case qnc::mdns::Message::AAAA:
         debug << ", address=" << resource.address();
         break;
 
-    case MDNS::Message::PTR:
+    case qnc::mdns::Message::PTR:
         debug << ", pointer=" << resource.pointer();
         break;
 
-    case MDNS::Message::TXT:
+    case qnc::mdns::Message::TXT:
         debug << ", text=" << resource.text();
         break;
 
-    case MDNS::Message::SRV:
+    case qnc::mdns::Message::SRV:
         debug << ", service=" << resource.service();
         break;
 
-    case MDNS::Message::ANY:
-    case MDNS::Message::CNAME:
-    case MDNS::Message::NSEC:
-    case MDNS::Message::MX:
-    case MDNS::Message::NS:
-    case MDNS::Message::OPT:
+    case qnc::mdns::Message::ANY:
+    case qnc::mdns::Message::CNAME:
+    case qnc::mdns::Message::NSEC:
+    case qnc::mdns::Message::MX:
+    case qnc::mdns::Message::NS:
+    case qnc::mdns::Message::OPT:
         break;
     }
 
@@ -495,7 +495,7 @@ QDebug operator<<(QDebug debug, const MDNS::Resource &resource)
     return debug << ")";
 }
 
-QDebug operator<<(QDebug debug, const MDNS::ServiceRecord &service)
+QDebug operator<<(QDebug debug, const qnc::mdns::ServiceRecord &service)
 {
     const auto saver = QDebugStateSaver{debug};
 

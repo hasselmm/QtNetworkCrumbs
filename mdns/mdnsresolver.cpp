@@ -3,9 +3,9 @@
  */
 #include "mdnsresolver.h"
 
-// MDNS headers
-#include "mdnsliterals.h"
+// QtNetworkCrumbs headers
 #include "mdnsmessage.h"
+#include "qncliterals.h"
 
 // Qt headers
 #include <QHostAddress>
@@ -18,7 +18,7 @@
 // STL headers
 #include <unordered_map>
 
-namespace MDNS {
+namespace qnc::mdns {
 
 namespace {
 
@@ -188,11 +188,11 @@ int Resolver::interval() const
 
 bool Resolver::lookupHostNames(QStringList hostNames)
 {
-    auto message = MDNS::Message{};
+    auto message = qnc::mdns::Message{};
 
     for (const auto &name: hostNames) {
-        message.addQuestion({qualifiedHostName(name, m_domain).toLatin1(), MDNS::Message::A});
-        message.addQuestion({qualifiedHostName(name, m_domain).toLatin1(), MDNS::Message::AAAA});
+        message.addQuestion({qualifiedHostName(name, m_domain).toLatin1(), qnc::mdns::Message::A});
+        message.addQuestion({qualifiedHostName(name, m_domain).toLatin1(), qnc::mdns::Message::AAAA});
     }
 
     return lookup(message);
@@ -200,10 +200,10 @@ bool Resolver::lookupHostNames(QStringList hostNames)
 
 bool Resolver::lookupServices(QStringList serviceTypes)
 {
-    auto message = MDNS::Message{};
+    auto message = qnc::mdns::Message{};
 
     for (const auto &type: serviceTypes)
-        message.addQuestion({qualifiedHostName(type, m_domain).toLatin1(), MDNS::Message::PTR});
+        message.addQuestion({qualifiedHostName(type, m_domain).toLatin1(), qnc::mdns::Message::PTR});
 
     return lookup(message);
 }
@@ -313,7 +313,7 @@ void Resolver::onReadyRead(QUdpSocket *socket)
 {
     while (socket->hasPendingDatagrams()) {
         if (const auto received = socket->receiveDatagram(); !isOwnMessage(received)) {
-            const auto message = MDNS::Message{received.data()};
+            const auto message = qnc::mdns::Message{received.data()};
 
             auto resolvedAddresses = std::unordered_map<QByteArray, QList<QHostAddress>>{};
             auto resolvedServices = std::unordered_map<QByteArray, ServiceRecord>{};
@@ -352,9 +352,9 @@ void Resolver::onTimeout()
     submitQueries();
 }
 
-} // namespace MDNS
+} // namespace qnc::mdns
 
-QDebug operator<<(QDebug debug, const MDNS::ServiceDescription &service)
+QDebug operator<<(QDebug debug, const qnc::mdns::ServiceDescription &service)
 {
     const auto saver = QDebugStateSaver{debug};
 

@@ -2,10 +2,10 @@
  * Copyright (C) 2019-2024 Mathias Hasselmann
  */
 
-// MDNS headers
-#include "mdnsliterals.h"
+// QtNetworkCrumbs headers
 #include "mdnsmessage.h"
 #include "mdnsresolver.h"
+#include "qncliterals.h"
 
 // Qt headers
 #include <QCoreApplication>
@@ -13,7 +13,7 @@
 #include <QHostAddress>
 #include <QLoggingCategory>
 
-namespace MDNS::Demo {
+namespace qnc::mdns::demo {
 namespace {
 
 Q_LOGGING_CATEGORY(lcDemo, "mdns.demo.resolver", QtInfoMsg)
@@ -25,27 +25,29 @@ public:
 
     int run()
     {
-        const auto resolver = new MDNS::Resolver{this};
+        const auto resolver = new Resolver{this};
 
-        connect(resolver, &MDNS::Resolver::hostNameResolved,
+        connect(resolver, &Resolver::hostNameResolved,
                 this, [](const auto hostName, const auto addresses) {
             qCInfo(lcDemo).verbosity(QDebug::MinimumVerbosity)
                     << "host resolved:" << hostName << "=>" << addresses;
         });
 
-        connect(resolver, &MDNS::Resolver::serviceResolved,
+        connect(resolver, &Resolver::serviceResolved,
                 this, [](const auto service) {
             qCInfo(lcDemo).verbosity(QDebug::MinimumVerbosity)
                     << "service resolved:" << service;
         });
 
-        connect(resolver, &MDNS::Resolver::messageReceived,
+        connect(resolver, &Resolver::messageReceived,
                 this, [](const auto message) {
             qCDebug(lcDemo).verbosity(QDebug::MinimumVerbosity)
                     << "message received:" << message;
         });
 
         resolver->lookupServices({"_http._tcp"_L1, "_xpresstrain._tcp"_L1, "_googlecast._tcp"_L1});
+        // resolver->lookupServices({"_tcp"_L1});
+        resolver->lookupServices({"_http._tcp"_L1, "_universal"_L1});
         resolver->lookupHostNames({"juicifer"_L1, "android"_L1});
 
         return exec();
@@ -53,9 +55,9 @@ public:
 };
 
 } // namespace
-} // namespace MDNS::Demo
+} // namespace qnc::mdns::demo
 
 int main(int argc, char *argv[])
 {
-    return MDNS::Demo::ResolverDemo{argc, argv}.run();
+    return qnc::mdns::demo::ResolverDemo{argc, argv}.run();
 }

@@ -5,8 +5,7 @@
 
 Q_DECLARE_METATYPE(QHostAddress)
 
-namespace MDNS {
-namespace Tests {
+namespace qnc::mdns::tests {
 
 class MessagesTest : public QObject
 {
@@ -370,14 +369,14 @@ private slots:
         QTest::addColumn<QByteArray>("expectedData");
 
         QTest::newRow("empty")
-                << MDNS::Message{}
+                << Message{}
                 << QByteArray::fromHex("0000 0000"
                                    "0000 0000 0000 0000");
 
         QTest::newRow("xpresstrain")
-                << MDNS::Message{}.
-                   addQuestion({"_http._tcp.local", MDNS::Message::PTR}).
-                   addQuestion({"_xpresstrain._tcp.local", MDNS::Message::PTR})
+                << Message{}.
+                   addQuestion({"_http._tcp.local", Message::PTR}).
+                   addQuestion({"_xpresstrain._tcp.local", Message::PTR})
                 << QByteArray::fromHex("0000 0000"
                                    "0002 0000 0000 0000"
                                    "05 5f68747470"
@@ -392,8 +391,8 @@ private slots:
                                    "000c 0001");
 
         QTest::newRow("juicifer")
-                << MDNS::Message{}.
-                   addQuestion({"juicifer.local", MDNS::Message::A})
+                << Message{}.
+                   addQuestion({"juicifer.local", Message::A})
                 << QByteArray::fromHex("0000 0000"
                                    "0001 0000 0000 0000"
                                    "08 6a75696369666572"
@@ -488,9 +487,8 @@ private:
     using RecordList = QList<QVariantList>;
 };
 
-} // namespace Tests
-} // namespace MDNS
+} // namespace qnc::mdns::tests
 
-QTEST_GUILESS_MAIN(MDNS::Tests::MessagesTest)
+QTEST_GUILESS_MAIN(qnc::mdns::tests::MessagesTest)
 
 #include "tst_mdnsmessages.moc"

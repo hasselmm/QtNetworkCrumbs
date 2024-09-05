@@ -1,6 +1,6 @@
-#include "mdnsliterals.h"
+#include "qncliterals.h"
 
-namespace MDNS {
+namespace qnc {
 static_assert('*'_L1.unicode() == 42);
 static_assert("constexpr"_L1.size() == 9);
-} // namespace MDNS
+} // namespace qnc

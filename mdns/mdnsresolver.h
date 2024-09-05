@@ -11,7 +11,7 @@ class QNetworkDatagram;
 class QTimer;
 class QUdpSocket;
 
-namespace MDNS {
+namespace qnc::mdns {
 
 class Message;
 class ServiceRecord;
@@ -64,15 +64,15 @@ public slots:
 
     bool lookupHostNames(QStringList hostNames);
     bool lookupServices(QStringList serviceTypes);
-    bool lookup(MDNS::Message query);
+    bool lookup(qnc::mdns::Message query);
 
 signals:
     void domainChanged(QString domain);
     void intervalChanged(int interval);
 
     void hostNameResolved(QString hostname, QList<QHostAddress> addresses);
-    void serviceResolved(MDNS::ServiceDescription service);
-    void messageReceived(MDNS::Message message);
+    void serviceResolved(qnc::mdns::ServiceDescription service);
+    void messageReceived(qnc::mdns::Message message);
 
 private:
     bool isOwnMessage(QNetworkDatagram message) const;
@@ -91,8 +91,8 @@ private:
     QByteArrayList m_queries;
 };
 
-} // namespace MDNS
+} // namespace qnc::mdns
 
-QDebug operator<<(QDebug debug, const MDNS::ServiceDescription &service);
+QDebug operator<<(QDebug debug, const qnc::mdns::ServiceDescription &service);
 
 #endif // MDNS_MDNSRESOLVER_H

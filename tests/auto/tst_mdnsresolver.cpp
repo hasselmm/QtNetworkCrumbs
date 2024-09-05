@@ -2,7 +2,7 @@
  * Copyright (C) 2019-2024 Mathias Hasselmann
  */
 
-// MDNS headers
+// QtNetworkCrumbs headers
 #include "mdnsresolver.h"
 
 // Qt headers
@@ -20,8 +20,7 @@ inline bool qCompare(const QSignalSpy &t1, const QList<QVariantList> &t2,
 
 } // namespace QTest
 
-namespace MDNS {
-namespace Tests {
+namespace qnc::mdns::tests {
 
 using namespace std::chrono_literals;
 
@@ -128,9 +127,8 @@ private slots:
     }
 };
 
-} // namespace Tests
-} // namespace MDNS
+} // namespace qnc::mdns::tests
 
-QTEST_GUILESS_MAIN(MDNS::Tests::ResolverTest)
+QTEST_GUILESS_MAIN(qnc::mdns::tests::ResolverTest)
 
 #include "tst_mdnsresolver.moc"
