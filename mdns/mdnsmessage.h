@@ -1,5 +1,5 @@
 /* QtNetworkCrumbs - Some networking toys for Qt
- * Copyright (C) 2019-2021 Mathias Hasselmann
+ * Copyright (C) 2019-2024 Mathias Hasselmann
  */
 #ifndef MDNS_MDNSMESSAGE_H
 #define MDNS_MDNSMESSAGE_H

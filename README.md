@@ -22,5 +22,5 @@ Android, iOS, Linux, macOS, Windows.
 
 ---
 
-Copyright (C) 2019-2023 Mathias Hasselmann
+Copyright (C) 2019-2024 Mathias Hasselmann
 Licensed under MIT License
