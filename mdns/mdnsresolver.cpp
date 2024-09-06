@@ -111,7 +111,8 @@ auto parseTxtRecord(const QByteArray &txtRecord)
         const auto length = static_cast<int>(static_cast<quint8>(*it));
 
         if (it + length >= last) {
-            qCWarning(lcResolver, "Malformed TXT record at offset");
+            const auto offset = static_cast<int>(it - first);
+            qCWarning(lcResolver, "Malformed TXT record at offset %d", offset);
             break;
         }
 
