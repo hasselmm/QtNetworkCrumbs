@@ -116,8 +116,9 @@ auto parseTxtRecord(const QByteArray &txtRecord)
             break;
         }
 
-        ++it;
-        stringList += QString::fromUtf8(++it, length);
+        it += 1;
+
+        stringList += QString::fromUtf8(it, length);
         it += length;
     }
 
