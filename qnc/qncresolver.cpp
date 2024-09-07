@@ -207,9 +207,16 @@ void MulticastResolver::submitQueries(const SocketTable &sockets)
         const auto socket = static_cast<QUdpSocket *>(it->get());
         const auto group = multicastGroup(address);
 
-        for (const auto &data: m_queries)
-            socket->writeDatagram(data, group, port());
+        for (const auto &data: m_queries) {
+            const auto query = finalizeQuery(address, data);
+            socket->writeDatagram(query, group, port());
+        }
     }
+}
+
+QByteArray MulticastResolver::finalizeQuery(const QHostAddress &/*address*/, const QByteArray &query) const
+{
+    return query;
 }
 
 void MulticastResolver::onDatagramReceived(QUdpSocket *socket)

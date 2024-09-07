@@ -74,6 +74,8 @@ protected:
 
     [[nodiscard]] virtual quint16 port() const = 0;
     [[nodiscard]] virtual QHostAddress multicastGroup(const QHostAddress &address) const = 0;
+    [[nodiscard]] virtual QByteArray finalizeQuery(const QHostAddress &address, const QByteArray &query) const;
+
     virtual void processDatagram(const QNetworkDatagram &message) = 0;
 
     [[nodiscard]] static bool isSupportedInterfaceType(const QNetworkInterface &iface);
