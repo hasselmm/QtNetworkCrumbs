@@ -22,7 +22,18 @@ inline bool qCompare(const QSignalSpy &t1, const QList<QVariantList> &t2,
 
 namespace qnc::mdns::tests {
 
+using namespace std::chrono;
 using namespace std::chrono_literals;
+
+namespace {
+
+template<typename... Ts>
+constexpr int ms(const duration<Ts...> &duration)
+{
+    return static_cast<int>(duration_cast<milliseconds>(duration).count());
+}
+
+} // namespace
 
 class ResolverTest : public QObject
 {
@@ -65,34 +76,38 @@ private slots:
         auto intervalChanges = QSignalSpy{&resolver, &Resolver::scanIntervalChanged};
         auto expectedIntervalChanges = QList<QVariantList>{};
 
-        QCOMPARE(resolver.scanInterval(), 2000);
-        QCOMPARE(resolver.scanIntervalAsDuration(), 2s);
+        constexpr auto interval0 = 2s;
+        constexpr auto interval1 = 3s;
+        constexpr auto interval2 = 3500ms;
+
+        QCOMPARE(resolver.scanInterval(), ms(interval0));
+        QCOMPARE(resolver.scanIntervalAsDuration(), interval0);
         QCOMPARE(intervalChanges, expectedIntervalChanges);
 
-        resolver.setScanInterval(2s);
+        resolver.setScanInterval(interval0);
 
-        QCOMPARE(resolver.scanInterval(), 2000);
-        QCOMPARE(resolver.scanIntervalAsDuration(), 2s);
+        QCOMPARE(resolver.scanInterval(), ms(interval0));
+        QCOMPARE(resolver.scanIntervalAsDuration(), interval0);
         QCOMPARE(intervalChanges, expectedIntervalChanges);
 
-        resolver.setScanInterval(3s);
+        resolver.setScanInterval(interval1);
 
-        expectedIntervalChanges += QVariantList{3000};
-        QCOMPARE(resolver.scanInterval(), 3000);
-        QCOMPARE(resolver.scanIntervalAsDuration(), 3s);
+        expectedIntervalChanges += QVariantList{ms(interval1)};
+        QCOMPARE(resolver.scanInterval(), ms(interval1));
+        QCOMPARE(resolver.scanIntervalAsDuration(), interval1);
         QCOMPARE(intervalChanges, expectedIntervalChanges);
 
-        resolver.setScanInterval(3000);
+        resolver.setScanInterval(ms(interval1));
 
-        QCOMPARE(resolver.scanInterval(), 3000);
-        QCOMPARE(resolver.scanIntervalAsDuration(), 3s);
+        QCOMPARE(resolver.scanInterval(), ms(interval1));
+        QCOMPARE(resolver.scanIntervalAsDuration(), interval1);
         QCOMPARE(intervalChanges, expectedIntervalChanges);
 
-        resolver.setScanInterval(3500);
+        resolver.setScanInterval(ms(interval2));
 
-        expectedIntervalChanges += QVariantList{3500};
-        QCOMPARE(resolver.scanInterval(), 3500);
-        QCOMPARE(resolver.scanIntervalAsDuration(), 3500ms);
+        expectedIntervalChanges += QVariantList{ms(interval2)};
+        QCOMPARE(resolver.scanInterval(), ms(interval2));
+        QCOMPARE(resolver.scanIntervalAsDuration(), interval2);
         QCOMPARE(intervalChanges, expectedIntervalChanges);
     }
 
