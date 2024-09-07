@@ -358,7 +358,7 @@ void Resolver::onTimeout()
 
 QDebug operator<<(QDebug debug, const qnc::mdns::ServiceDescription &service)
 {
-    const auto saver = QDebugStateSaver{debug};
+    const auto _ = QDebugStateSaver{debug};
 
     if (debug.verbosity() >= QDebug::DefaultVerbosity)
         debug.nospace() << service.staticMetaObject.className();
