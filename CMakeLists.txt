@@ -12,6 +12,11 @@ if (CMAKE_CXX_COMPILER_ID MATCHES GNU|Clang)
         -Werror=switch -Werror=uninitialized -Werror=unused)
 endif()
 
+set(QNC_COMPILE_DEFINITIONS
+    -DQT_DISABLE_DEPRECATED_BEFORE=0x050f00
+    -DQT_NO_CAST_FROM_ASCII=1
+    -DQT_NO_URL_CAST_FROM_STRING=1)
+
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
@@ -46,6 +51,37 @@ else()
         add_library(QtNetworkCrumbs::Zlib ALIAS ZLIB::ZLIB)
     endif()
 endif()
+
+function(qnc_add_library NAME)
+    if (COMMAND qt_add_executable)
+        qt_add_library("${NAME}" ${ARGN})
+    else()
+        add_library("${NAME}" ${ARGN})
+    endif()
+
+    target_include_directories("${NAME}" PUBLIC  ${CMAKE_CURRENT_SOURCE_DIR})
+    target_compile_definitions("${NAME}" PRIVATE ${QNC_COMPILE_DEFINITIONS})
+    target_compile_options    ("${NAME}" PRIVATE ${QNC_COMPILE_OPTIONS})
+endfunction()
+
+function(qnc_add_executable NAME)
+    cmake_parse_arguments(EXECUTABLE "" "TYPE" "" ${ARGN})
+
+    if (COMMAND qt_add_executable)
+        qt_add_executable("${NAME}" ${EXECUTABLE_UNPARSED_ARGUMENTS})
+    else()
+        add_executable("${NAME}" ${EXECUTABLE_UNPARSED_ARGUMENTS})
+    endif()
+
+    target_compile_definitions("${NAME}" PRIVATE ${QNC_COMPILE_DEFINITIONS})
+    target_compile_options    ("${NAME}" PRIVATE ${QNC_COMPILE_OPTIONS})
+
+    set_target_properties(
+        "${NAME}" PROPERTIES
+        MACOSX_BUNDLE "de.taschenorakel.qnc.${NAME}"
+        XCODE_PRODUCT_TYPE "com.apple.product-type.bundle.${EXECUTABLE_TYPE}"
+    )
+endfunction()
 
 add_custom_target(metadata SOURCES LICENSE README.md)
 
