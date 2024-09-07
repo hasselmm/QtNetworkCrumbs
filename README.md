@@ -18,9 +18,13 @@ This are some tiny networking toys written in C++17 for [Qt](https://qt.io).
 This is build and tested on all the major platforms supported by Qt:
 Android, iOS, Linux, macOS, Windows.
 
-![Continuous Integration](https://github.com/hasselmm/QtNetworkCrumbs/workflows/Continuous%20Integration/badge.svg)
+[![Continuous Integration][build-status.svg]][build-status]
 
 ---
 
 Copyright (C) 2019-2024 Mathias Hasselmann
 Licensed under MIT License
+
+<!-- some more complex links -->
+[build-status.svg]: https://github.com/hasselmm/QtNetworkCrumbs/actions/workflows/integration.yaml/badge.svg
+[build-status]:     https://github.com/hasselmm/QtNetworkCrumbs/actions/workflows/integration.yaml
