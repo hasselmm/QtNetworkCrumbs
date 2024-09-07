@@ -35,19 +35,31 @@ jobs:
           - id: android
             os: ubuntu-22.04
             target: android
-            cmake-flags: [
-              '-DCMAKE_SYSTEM_NAME:STRING=Android',
-              '-DCMAKE_SYSTEM_VERSION:STRING=21',
-              '-DCMAKE_ANDROID_ARCH_ABI:STRING=armeabi-v7a',
-              '-DCMAKE_ANDROID_STL:STRING=c++_shared',
-              '-DCMAKE_ANDROID_SDK:PATH=$ANDROID_SDK_ROOT',
-              '-DCMAKE_ANDROID_NDK:PATH=$ANDROID_NDK_ROOT',
-              '-DCMAKE_MAKE_PROGRAM:FILEPATH=/usr/bin/ninja',
-              '-DCMAKE_FIND_ROOT_PATH:PATH=$Qt5_DIR$Qt6_DIR',
-              '-DCMAKE_PREFIX_PATH:STRING=$Qt5_DIR$Qt6_DIR',
+            arch-qt5: android
+            arch-qt6: android_arm64_v8a
+            cmake-flags-qt5: [
               '-DANDROID_ABI:STRING=armeabi-v7a',
+              '-DANDROID_NDK:PATH=$ANDROID_NDK_ROOT',
+              '-DANDROID_SDK:PATH=$ANDROID_SDK_ROOT',
+              '-DANDROID_PLATFORM:STRING=android-21',
+              '-DANDROID_STL:STRING=c++_shared',
+              '-DANDROID_USE_LEGACY_TOOLCHAIN_FILE:BOOL=OFF',
+              '-DCMAKE_FIND_ROOT_PATH:PATH=$Qt5_DIR',
+              '-DCMAKE_PREFIX_PATH:STRING=$Qt5_DIR',
+              '-GNinja', '--toolchain', '$ANDROID_NDK_ROOT/build/cmake/android.toolchain.cmake',
+            ]
+            cmake-flags-qt6: [
+              '-DANDROID_ABI:STRING=arm64-v8a',
+              '-DANDROID_PLATFORM:STRING=android-23',
+              '-DANDROID_SDK_ROOT:PATH=$ANDROID_SDK_ROOT',
+              '-DANDROID_NDK:PATH=$ANDROID_NDK_ROOT',
+              '-DANDROID_STL:STRING=c++_shared',
+              '-DANDROID_USE_LEGACY_TOOLCHAIN_FILE:BOOL=OFF',
+              '-DCMAKE_FIND_ROOT_PATH:PATH=$Qt6_DIR',
+              '-DCMAKE_PREFIX_PATH:STRING=$Qt6_DIR',
               '-DQT_HOST_PATH=$Qt6_HOSTDIR',
-              '-GNinja',
+              '-DQT_NO_GLOBAL_APK_TARGET_PART_OF_ALL:BOOL=ON',
+              '-GNinja', '--toolchain', '$ANDROID_NDK_ROOT/build/cmake/android.toolchain.cmake',
             ]
 
           - id: macos
@@ -105,7 +117,12 @@ jobs:
 
       - name: Configure
         working-directory: ${{runner.workspace}}/build
-        run: cmake ${{github.workspace}} -DCMAKE_BUILD_TYPE:STRING=Release ${{join(matrix.configuration.cmake-flags, ' ')}}
+        run: cmake ${{github.workspace}} -DCMAKE_BUILD_TYPE:STRING=Release
+            ${{join(startsWith(matrix.qt-version, '5.')
+                        && matrix.configuration.cmake-flags-qt5
+                        || matrix.configuration.cmake-flags-qt6
+                        || matrix.configuration.cmake-flags,
+                    ' ')}}
 
       - uses: actions/upload-artifact@v3
         with:
