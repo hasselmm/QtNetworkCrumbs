@@ -62,37 +62,37 @@ private slots:
     void intervalProperty()
     {
         auto resolver = Resolver{};
-        auto intervalChanges = QSignalSpy{&resolver, &Resolver::intervalChanged};
+        auto intervalChanges = QSignalSpy{&resolver, &Resolver::scanIntervalChanged};
         auto expectedIntervalChanges = QList<QVariantList>{};
 
-        QCOMPARE(resolver.interval(), 2000);
-        QCOMPARE(resolver.intervalAsDuration(), 2s);
+        QCOMPARE(resolver.scanInterval(), 2000);
+        QCOMPARE(resolver.scanIntervalAsDuration(), 2s);
         QCOMPARE(intervalChanges, expectedIntervalChanges);
 
-        resolver.setInterval(2s);
+        resolver.setScanInterval(2s);
 
-        QCOMPARE(resolver.interval(), 2000);
-        QCOMPARE(resolver.intervalAsDuration(), 2s);
+        QCOMPARE(resolver.scanInterval(), 2000);
+        QCOMPARE(resolver.scanIntervalAsDuration(), 2s);
         QCOMPARE(intervalChanges, expectedIntervalChanges);
 
-        resolver.setInterval(3s);
+        resolver.setScanInterval(3s);
 
         expectedIntervalChanges += QVariantList{3000};
-        QCOMPARE(resolver.interval(), 3000);
-        QCOMPARE(resolver.intervalAsDuration(), 3s);
+        QCOMPARE(resolver.scanInterval(), 3000);
+        QCOMPARE(resolver.scanIntervalAsDuration(), 3s);
         QCOMPARE(intervalChanges, expectedIntervalChanges);
 
-        resolver.setInterval(3000);
+        resolver.setScanInterval(3000);
 
-        QCOMPARE(resolver.interval(), 3000);
-        QCOMPARE(resolver.intervalAsDuration(), 3s);
+        QCOMPARE(resolver.scanInterval(), 3000);
+        QCOMPARE(resolver.scanIntervalAsDuration(), 3s);
         QCOMPARE(intervalChanges, expectedIntervalChanges);
 
-        resolver.setInterval(3500);
+        resolver.setScanInterval(3500);
 
         expectedIntervalChanges += QVariantList{3500};
-        QCOMPARE(resolver.interval(), 3500);
-        QCOMPARE(resolver.intervalAsDuration(), 3500ms);
+        QCOMPARE(resolver.scanInterval(), 3500);
+        QCOMPARE(resolver.scanIntervalAsDuration(), 3500ms);
         QCOMPARE(intervalChanges, expectedIntervalChanges);
     }
 

@@ -162,28 +162,28 @@ QString Resolver::domain() const
     return m_domain;
 }
 
-void Resolver::setInterval(std::chrono::milliseconds ms)
+void Resolver::setScanInterval(std::chrono::milliseconds ms)
 {
-    if (intervalAsDuration() != ms) {
+    if (scanIntervalAsDuration() != ms) {
         m_timer->setInterval(ms);
-        emit intervalChanged(interval());
+        emit scanIntervalChanged(scanInterval());
     }
 }
 
-void Resolver::setInterval(int ms)
+void Resolver::setScanInterval(int ms)
 {
-    if (interval() != ms) {
+    if (scanInterval() != ms) {
         m_timer->setInterval(ms);
-        emit intervalChanged(interval());
+        emit scanIntervalChanged(scanInterval());
     }
 }
 
-std::chrono::milliseconds Resolver::intervalAsDuration() const
+std::chrono::milliseconds Resolver::scanIntervalAsDuration() const
 {
     return m_timer->intervalAsDuration();
 }
 
-int Resolver::interval() const
+int Resolver::scanInterval() const
 {
     return m_timer->interval();
 }
