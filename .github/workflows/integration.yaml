@@ -9,7 +9,7 @@ jobs:
       fail-fast: false
 
       matrix:
-        qt-version: ['5.15.2', '6.5.1']
+        qt-version: ['5.15.2', '6.5.3']
         configuration:
           - id: windows-msvc
             os: windows-2022
