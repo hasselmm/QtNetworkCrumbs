@@ -4,10 +4,11 @@
 #ifndef QNC_QNCRESOLVER_H
 #define QNC_QNCRESOLVER_H
 
+#include <QAbstractSocket>
+#include <QHash>
+#include <QHostAddress>
 #include <QObject>
 
-class QAbstractSocket;
-class QHostAddress;
 class QNetworkDatagram;
 class QNetworkInterface;
 class QTimer;
@@ -34,22 +35,25 @@ signals:
     void scanIntervalChanged(int interval);
 
 protected:
+    using SocketPointer = std::shared_ptr<QAbstractSocket>;
+    using SocketTable   = QHash<QHostAddress, SocketPointer>;
+
     [[nodiscard]] virtual bool isSupportedInterface(const QNetworkInterface &iface) const = 0;
     [[nodiscard]] virtual bool isSupportedAddress(const QHostAddress &address) const = 0;
 
-    [[nodiscard]] virtual QAbstractSocket *createSocket(const QNetworkInterface &iface,
-                                                        const QHostAddress &address) = 0;
+    [[nodiscard]] virtual SocketPointer createSocket(const QNetworkInterface &iface,
+                                                     const QHostAddress &address) = 0;
 
-    [[nodiscard]] QAbstractSocket *socketForAddress(const QHostAddress &address) const;
+    [[nodiscard]] SocketPointer socketForAddress(const QHostAddress &address) const;
 
-    virtual void submitQueries(const QList<QAbstractSocket *> &socketList) = 0;
+    virtual void submitQueries(const SocketTable &sockets) = 0;
 
 private:
     void onTimeout();
     void scanNetworkInterfaces();
 
-    QTimer *const               m_timer;
-    QList<QAbstractSocket *>    m_sockets;
+    QTimer *const   m_timer;
+    SocketTable     m_sockets;
 };
 
 class MulticastResolver : public GenericResolver
@@ -63,10 +67,10 @@ protected:
     [[nodiscard]] bool isSupportedInterface(const QNetworkInterface &iface) const override;
     [[nodiscard]] bool isSupportedAddress(const QHostAddress &address) const override;
 
-    [[nodiscard]] QAbstractSocket *createSocket(const QNetworkInterface &iface,
-                                                const QHostAddress &address) override;
+    [[nodiscard]] SocketPointer createSocket(const QNetworkInterface &iface,
+                                             const QHostAddress &address) override;
 
-    void submitQueries(const QList<QAbstractSocket *> &socketList) override;
+    void submitQueries(const SocketTable &sockets) override;
 
     [[nodiscard]] virtual quint16 port() const = 0;
     [[nodiscard]] virtual QHostAddress multicastGroup(const QHostAddress &address) const = 0;

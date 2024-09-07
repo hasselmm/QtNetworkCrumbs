@@ -20,12 +20,22 @@ using namespace std::chrono_literals;
 Q_LOGGING_CATEGORY(lcResolver,  "qnc.core.resolver")
 Q_LOGGING_CATEGORY(lcMulticast, "qnc.core.resolver.multicast")
 
-auto isSocketForAddress(const QHostAddress &address)
+QHostAddress wildcardAddress(const QHostAddress &address)
 {
-    return [address = std::move(address)](QAbstractSocket *socket) {
-        return socket->localAddress() == address
-            || socket->peerAddress() == address;
-    };
+    switch(address.protocol()) {
+    case QUdpSocket::IPv4Protocol:
+        return QHostAddress::AnyIPv4;
+
+    case QUdpSocket::IPv6Protocol:
+        return QHostAddress::AnyIPv6;
+
+    case QUdpSocket::AnyIPProtocol:
+    case QUdpSocket::UnknownNetworkLayerProtocol:
+        break;
+    }
+
+    Q_UNREACHABLE();
+    return {};
 }
 
 } // namespace
@@ -65,19 +75,15 @@ int GenericResolver::scanInterval() const
     return m_timer->interval();
 }
 
-QAbstractSocket *GenericResolver::socketForAddress(const QHostAddress &address) const
+GenericResolver::SocketPointer
+GenericResolver::socketForAddress(const QHostAddress &address) const
 {
-    const auto it = std::find_if(m_sockets.begin(), m_sockets.end(),
-                                 isSocketForAddress(address));
-    if (it != m_sockets.end())
-        return *it;
-
-    return nullptr;
+    return m_sockets[address];
 }
 
 void GenericResolver::scanNetworkInterfaces()
 {
-    auto newSocketList = QList<QAbstractSocket *>{};
+    auto newSockets = SocketTable{};
 
     const auto &allInterfaces = QNetworkInterface::allInterfaces();
 
@@ -91,7 +97,7 @@ void GenericResolver::scanNetworkInterfaces()
                 continue;
 
             if (const auto socket = socketForAddress(entry.ip())) {
-                newSocketList.append(socket);
+                newSockets.insert(entry.ip(), socket);
                 continue;
             }
 
@@ -100,20 +106,11 @@ void GenericResolver::scanNetworkInterfaces()
                    qUtf16Printable(iface.humanReadableName()));
 
             if (const auto socket = createSocket(iface, entry.ip()))
-                newSocketList.append(socket);
+                newSockets.insert(entry.ip(), socket);
         }
     }
 
-    const auto oldSocketList = std::exchange(m_sockets, newSocketList);
-
-    for (const auto socket : oldSocketList) {
-        if (!m_sockets.contains(socket)) {
-            qCDebug(lcResolver, "Destroying socket for %ls",
-                    qUtf16Printable(socket->localAddress().toString()));
-
-            delete socket;
-        }
-    }
+    std::exchange(m_sockets, newSockets);
 }
 
 void GenericResolver::onTimeout()
@@ -161,12 +158,15 @@ bool MulticastResolver::addQuery(QByteArray &&query)
     return false;
 }
 
-QAbstractSocket *MulticastResolver::createSocket(const QNetworkInterface &iface,
-                                                 const QHostAddress &address)
+MulticastResolver::SocketPointer
+MulticastResolver::createSocket(const QNetworkInterface &iface, const QHostAddress &address)
 {
-    auto socket = std::make_unique<QUdpSocket>(this);
+    auto socket = std::make_shared<QUdpSocket>(this);
 
-    if (!socket->bind(address, port(), QUdpSocket::ShareAddress | QUdpSocket::ReuseAddressHint)) {
+    const auto &bindAddress = wildcardAddress(address);
+    const auto &bindMode = QUdpSocket::ShareAddress | QUdpSocket::ReuseAddressHint;
+
+    if (!socket->bind(bindAddress, port(), bindMode)) {
         qCWarning(lcMulticast, "Could not bind multicast socket to %ls: %ls",
                   qUtf16Printable(address.toString()),
                   qUtf16Printable(socket->errorString()));
@@ -195,16 +195,17 @@ QAbstractSocket *MulticastResolver::createSocket(const QNetworkInterface &iface,
     socket->setMulticastInterface(iface);
     socket->setSocketOption(QUdpSocket::MulticastTtlOption, 4);
 
-    return socket.release();
+    return socket;
 }
 
-void MulticastResolver::submitQueries(const QList<QAbstractSocket *> &socketList)
+void MulticastResolver::submitQueries(const SocketTable &sockets)
 {
-    for (const auto abstractSocket: socketList) {
-        Q_ASSERT(dynamic_cast<QUdpSocket *>(abstractSocket));
+    for (auto it = sockets.cbegin(); it != sockets.cend(); ++it) {
+        Q_ASSERT(dynamic_cast<QUdpSocket *>(it->get()));
 
-        const auto socket = static_cast<QUdpSocket *>(abstractSocket);
-        const auto group = multicastGroup(socket->localAddress());
+        const auto &address = it.key();
+        const auto socket = static_cast<QUdpSocket *>(it->get());
+        const auto group = multicastGroup(address);
 
         for (const auto &data: m_queries)
             socket->writeDatagram(data, group, port());
