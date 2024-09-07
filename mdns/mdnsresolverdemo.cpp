@@ -8,10 +8,12 @@
 #include "qncliterals.h"
 
 // Qt headers
+#include <QCommandLineParser>
 #include <QCoreApplication>
 #include <QDebug>
 #include <QHostAddress>
 #include <QLoggingCategory>
+#include <QTimer>
 
 namespace qnc::mdns::demo {
 namespace {
@@ -25,6 +27,28 @@ public:
 
     int run()
     {
+        const auto timeout = QCommandLineOption{{"t"_L1, "timeout"_L1},
+                                                tr("Timeout after which to quit"), tr("SECONDS")};
+
+        auto commandLine = QCommandLineParser{};
+        commandLine.addOption(timeout);
+        commandLine.addHelpOption();
+        commandLine.process(arguments());
+
+        if (commandLine.isSet(timeout)) {
+            auto isNumber = false;
+            const auto &value = commandLine.value(timeout);
+            const auto seconds = value.toFloat(&isNumber);
+
+            if (!isNumber) {
+                qCWarning(lcDemo, "Not a number: %ls", qUtf16Printable(value));
+                return EXIT_FAILURE;
+            }
+
+            const auto milliseconds = std::chrono::milliseconds{qRound(seconds * 1000)};
+            QTimer::singleShot(milliseconds, this, &ResolverDemo::quit);
+        }
+
         const auto resolver = new Resolver{this};
 
         connect(resolver, &Resolver::hostNameResolved,
