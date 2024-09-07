@@ -36,7 +36,7 @@ GenericResolver::GenericResolver(QObject *parent)
 {
     m_timer->callOnTimeout(this, &GenericResolver::onTimeout);
     QTimer::singleShot(0, this, &GenericResolver::onTimeout);
-    m_timer->start(2s);
+    m_timer->start(15s);
 }
 
 void GenericResolver::setScanInterval(std::chrono::milliseconds ms)
