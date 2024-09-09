@@ -4,6 +4,7 @@
 
 // QtNetworkCrumbs headers
 #include "mdnsresolver.h"
+#include "qncliterals.h"
 
 // Qt headers
 #include <QSignalSpy>
@@ -22,7 +23,18 @@ inline bool qCompare(const QSignalSpy &t1, const QList<QVariantList> &t2,
 
 namespace qnc::mdns::tests {
 
+using namespace std::chrono;
 using namespace std::chrono_literals;
+
+namespace {
+
+template<typename... Ts>
+constexpr int ms(const duration<Ts...> &duration)
+{
+    return static_cast<int>(duration_cast<milliseconds>(duration).count());
+}
+
+} // namespace
 
 class ResolverTest : public QObject
 {
@@ -38,61 +50,68 @@ private slots:
         auto domainChanges = QSignalSpy{&resolver, &Resolver::domainChanged};
         auto expectedDomainChanges = QList<QVariantList>{};
 
-        QCOMPARE(resolver.domain(), "local");
+        const auto s_local = "local"_L1;
+        const auto s_test  = "test"_L1;
+
+        QCOMPARE(resolver.domain(), s_local);
         QCOMPARE(domainChanges, expectedDomainChanges);
 
-        resolver.setDomain("test");
+        resolver.setDomain(s_test);
 
-        expectedDomainChanges += {"test"};
-        QCOMPARE(resolver.domain(), "test");
+        expectedDomainChanges += {s_test};
+        QCOMPARE(resolver.domain(), s_test);
         QCOMPARE(domainChanges, expectedDomainChanges);
 
-        resolver.setDomain("test");
+        resolver.setDomain(s_test);
 
-        QCOMPARE(resolver.domain(), "test");
+        QCOMPARE(resolver.domain(), s_test);
         QCOMPARE(domainChanges, expectedDomainChanges);
 
-        resolver.setDomain("local");
+        resolver.setDomain(s_local);
 
-        expectedDomainChanges += {"local"};
-        QCOMPARE(resolver.domain(), "local");
+        expectedDomainChanges += {s_local};
+        QCOMPARE(resolver.domain(), s_local);
         QCOMPARE(domainChanges, expectedDomainChanges);
     }
 
     void intervalProperty()
     {
         auto resolver = Resolver{};
-        auto intervalChanges = QSignalSpy{&resolver, &Resolver::intervalChanged};
+        auto intervalChanges = QSignalSpy{&resolver, &Resolver::scanIntervalChanged};
         auto expectedIntervalChanges = QList<QVariantList>{};
 
-        QCOMPARE(resolver.interval(), 2000);
-        QCOMPARE(resolver.intervalAsDuration(), 2s);
+        constexpr auto interval0 = 2s;
+        constexpr auto interval1 = 3s;
+        constexpr auto interval2 = 3500ms;
+
+        QCOMPARE(resolver.scanInterval(), ms(interval0));
+        QCOMPARE(resolver.scanIntervalAsDuration(), interval0);
         QCOMPARE(intervalChanges, expectedIntervalChanges);
 
-        resolver.setInterval(2s);
+        resolver.setScanInterval(interval0);
 
-        QCOMPARE(resolver.interval(), 2000);
-        QCOMPARE(resolver.intervalAsDuration(), 2s);
+        QCOMPARE(resolver.scanInterval(), ms(interval0));
+        QCOMPARE(resolver.scanIntervalAsDuration(), interval0);
         QCOMPARE(intervalChanges, expectedIntervalChanges);
 
-        resolver.setInterval(3s);
+        resolver.setScanInterval(interval1);
 
-        expectedIntervalChanges += QVariantList{3000};
-        QCOMPARE(resolver.interval(), 3000);
-        QCOMPARE(resolver.intervalAsDuration(), 3s);
+        expectedIntervalChanges += QVariantList{ms(interval1)};
+        QCOMPARE(resolver.scanInterval(), ms(interval1));
+        QCOMPARE(resolver.scanIntervalAsDuration(), interval1);
         QCOMPARE(intervalChanges, expectedIntervalChanges);
 
-        resolver.setInterval(3000);
+        resolver.setScanInterval(ms(interval1));
 
-        QCOMPARE(resolver.interval(), 3000);
-        QCOMPARE(resolver.intervalAsDuration(), 3s);
+        QCOMPARE(resolver.scanInterval(), ms(interval1));
+        QCOMPARE(resolver.scanIntervalAsDuration(), interval1);
         QCOMPARE(intervalChanges, expectedIntervalChanges);
 
-        resolver.setInterval(3500);
+        resolver.setScanInterval(ms(interval2));
 
-        expectedIntervalChanges += QVariantList{3500};
-        QCOMPARE(resolver.interval(), 3500);
-        QCOMPARE(resolver.intervalAsDuration(), 3500ms);
+        expectedIntervalChanges += QVariantList{ms(interval2)};
+        QCOMPARE(resolver.scanInterval(), ms(interval2));
+        QCOMPARE(resolver.scanIntervalAsDuration(), interval2);
         QCOMPARE(intervalChanges, expectedIntervalChanges);
     }
 
@@ -100,30 +119,36 @@ private slots:
     {
         auto resolver = Resolver{};
 
-        QVERIFY(resolver.lookupHostNames({"alpha"}));
-        QVERIFY(resolver.lookupHostNames({"alpha", "beta"}));
-        QVERIFY(!resolver.lookupHostNames({"alpha", "beta"}));
-        QVERIFY(resolver.lookupHostNames({"beta"})); // FIXME: do we want to merge this into the previous query?
+        constexpr auto hostName1 = "alpha"_L1;
+        constexpr auto hostName2 = "beta"_L1;
+
+        QVERIFY(resolver.lookupHostNames({hostName1}));
+        QVERIFY(resolver.lookupHostNames({hostName1, hostName2}));
+        QVERIFY(!resolver.lookupHostNames({hostName1, hostName2}));
+        QVERIFY(resolver.lookupHostNames({hostName2})); // FIXME: do we want to merge this into the previous query?
 
         // verify search domain gets removed
-        QCOMPARE(resolver.domain(), "local");
-        QVERIFY(!resolver.lookupHostNames({"beta.local"}));
-        QVERIFY(!resolver.lookupHostNames({"beta.local."}));
+        QCOMPARE(resolver.domain(), "local"_L1);
+        QVERIFY(!resolver.lookupHostNames({"beta.local"_L1}));
+        QVERIFY(!resolver.lookupHostNames({"beta.local."_L1}));
     }
 
     void lookupServices()
     {
         auto resolver = Resolver{};
 
-        QVERIFY(resolver.lookupServices({"_http._tcp"}));
-        QVERIFY(resolver.lookupServices({"_http._tcp", "_ipp._tcp"}));
-        QVERIFY(!resolver.lookupServices({"_http._tcp", "_ipp._tcp"}));
-        QVERIFY(resolver.lookupServices({"_ipp._tcp"})); // FIXME: do we want to merge this into the previous query?
+        constexpr auto serviceType1 = "_http._tcp"_L1;
+        constexpr auto serviceType2 = "_ipp._tcp"_L1;
+
+        QVERIFY(resolver.lookupServices({serviceType1}));
+        QVERIFY(resolver.lookupServices({serviceType1, serviceType2}));
+        QVERIFY(!resolver.lookupServices({serviceType1, serviceType2}));
+        QVERIFY(resolver.lookupServices({serviceType2})); // FIXME: do we want to merge this into the previous query?
 
         // verify search domain gets removed
-        QCOMPARE(resolver.domain(), "local");
-        QVERIFY(!resolver.lookupServices({"_ipp._tcp.local"}));
-        QVERIFY(!resolver.lookupServices({"_ipp._tcp.local."}));
+        QCOMPARE(resolver.domain(), "local"_L1);
+        QVERIFY(!resolver.lookupServices({"_ipp._tcp.local"_L1}));
+        QVERIFY(!resolver.lookupServices({"_ipp._tcp.local."_L1}));
     }
 };
 

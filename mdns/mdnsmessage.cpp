@@ -376,7 +376,7 @@ QDebug operator<<(QDebug debug, const qnc::mdns::Label &label)
 
 QDebug operator<<(QDebug debug, const qnc::mdns::Message &message)
 {
-    const auto saver = QDebugStateSaver{debug};
+    const auto _ = QDebugStateSaver{debug};
 
     if (debug.verbosity() >= QDebug::DefaultVerbosity)
         debug.nospace() << message.staticMetaObject.className();
@@ -428,7 +428,7 @@ QDebug operator<<(QDebug debug, const qnc::mdns::Name &name)
 
 QDebug operator<<(QDebug debug, const qnc::mdns::Question &question)
 {
-    const auto saver = QDebugStateSaver{debug};
+    const auto _ = QDebugStateSaver{debug};
 
     if (debug.verbosity() >= QDebug::DefaultVerbosity)
         debug.nospace() << question.staticMetaObject.className();
@@ -448,7 +448,7 @@ QDebug operator<<(QDebug debug, const qnc::mdns::Question &question)
 
 QDebug operator<<(QDebug debug, const qnc::mdns::Resource &resource)
 {
-    const auto saver = QDebugStateSaver{debug};
+    const auto _ = QDebugStateSaver{debug};
 
     if (debug.verbosity() >= QDebug::DefaultVerbosity)
         debug.nospace() << resource.staticMetaObject.className();
@@ -497,7 +497,7 @@ QDebug operator<<(QDebug debug, const qnc::mdns::Resource &resource)
 
 QDebug operator<<(QDebug debug, const qnc::mdns::ServiceRecord &service)
 {
-    const auto saver = QDebugStateSaver{debug};
+    const auto _ = QDebugStateSaver{debug};
 
     if (debug.verbosity() >= QDebug::DefaultVerbosity)
         debug.nospace() << service.staticMetaObject.className();
