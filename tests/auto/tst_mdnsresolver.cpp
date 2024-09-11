@@ -80,7 +80,7 @@ private slots:
         auto intervalChanges = QSignalSpy{&resolver, &Resolver::scanIntervalChanged};
         auto expectedIntervalChanges = QList<QVariantList>{};
 
-        constexpr auto interval0 = 2s;
+        constexpr auto interval0 = 15s;
         constexpr auto interval1 = 3s;
         constexpr auto interval2 = 3500ms;
 

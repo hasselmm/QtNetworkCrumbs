@@ -22,61 +22,11 @@ namespace qnc::mdns {
 
 namespace {
 
-using namespace std::chrono_literals;
-
-Q_LOGGING_CATEGORY(lcResolver, "mdns.resolver")
+Q_LOGGING_CATEGORY(lcResolver, "qnc.mdns.resolver")
 
 constexpr auto s_mdnsUnicastIPv4 = "224.0.0.251"_L1;
 constexpr auto s_mdnsUnicastIPv6 = "ff02::fb"_L1;
 constexpr auto s_mdnsPort = 5353;
-
-auto multicastGroup(QUdpSocket *socket)
-{
-    switch (socket->localAddress().protocol()) {
-    case QUdpSocket::IPv4Protocol:
-        return QHostAddress{s_mdnsUnicastIPv4};
-    case QUdpSocket::IPv6Protocol:
-        return QHostAddress{s_mdnsUnicastIPv6};
-
-    case QUdpSocket::AnyIPProtocol:
-    case QUdpSocket::UnknownNetworkLayerProtocol:
-        break;
-    }
-
-    Q_UNREACHABLE();
-    return QHostAddress{};
-};
-
-bool isSupportedInterfaceType(QNetworkInterface::InterfaceType type)
-{
-    return type == QNetworkInterface::Ethernet
-            || type == QNetworkInterface::Wifi;
-}
-
-bool isMulticastInterface(const QNetworkInterface &iface)
-{
-    return iface.flags().testFlag(QNetworkInterface::IsRunning)
-            && iface.flags().testFlag(QNetworkInterface::CanMulticast);
-}
-
-bool isSupportedInterface(const QNetworkInterface &iface)
-{
-    return isSupportedInterfaceType(iface.type())
-            && isMulticastInterface(iface);
-}
-
-bool isLinkLocalAddress(const QHostAddress &address)
-{
-    return address.protocol() == QAbstractSocket::IPv4Protocol
-            || address.isLinkLocal();
-}
-
-auto isSocketForAddress(QHostAddress address)
-{
-    return [address = std::move(address)](QUdpSocket *socket) {
-        return socket->localAddress() == address;
-    };
-}
 
 auto normalizedHostName(QByteArray name, QString domain)
 {
@@ -142,14 +92,9 @@ ServiceDescription::ServiceDescription(QString domain, QByteArray name, ServiceR
 }
 
 Resolver::Resolver(QObject *parent)
-    : QObject{parent}
-    , m_timer{new QTimer{this}}
+    : core::MulticastResolver{parent}
     , m_domain{"local"_L1}
-{
-    m_timer->callOnTimeout(this, &Resolver::onTimeout);
-    QTimer::singleShot(0, this, &Resolver::onTimeout);
-    m_timer->start(2s);
-}
+{}
 
 void Resolver::setDomain(QString domain)
 {
@@ -162,42 +107,21 @@ QString Resolver::domain() const
     return m_domain;
 }
 
-void Resolver::setScanInterval(std::chrono::milliseconds ms)
+QHostAddress Resolver::multicastGroup(const QHostAddress &address) const
 {
-    if (scanIntervalAsDuration() != ms) {
-        m_timer->setInterval(ms);
-        emit scanIntervalChanged(scanInterval());
-    }
-}
+    switch (address.protocol()) {
+    case QUdpSocket::IPv4Protocol:
+        return QHostAddress{s_mdnsUnicastIPv4};
+    case QUdpSocket::IPv6Protocol:
+        return QHostAddress{s_mdnsUnicastIPv6};
 
-void Resolver::setScanInterval(int ms)
-{
-    if (scanInterval() != ms) {
-        m_timer->setInterval(ms);
-        emit scanIntervalChanged(scanInterval());
-    }
-}
-
-std::chrono::milliseconds Resolver::scanIntervalAsDuration() const
-{
-    return m_timer->intervalAsDuration();
-}
-
-int Resolver::scanInterval() const
-{
-    return m_timer->interval();
-}
-
-bool Resolver::lookupHostNames(QStringList hostNames)
-{
-    auto message = qnc::mdns::Message{};
-
-    for (const auto &name: hostNames) {
-        message.addQuestion({qualifiedHostName(name, m_domain).toLatin1(), qnc::mdns::Message::A});
-        message.addQuestion({qualifiedHostName(name, m_domain).toLatin1(), qnc::mdns::Message::AAAA});
+    case QUdpSocket::AnyIPProtocol:
+    case QUdpSocket::UnknownNetworkLayerProtocol:
+        break;
     }
 
-    return lookup(message);
+    Q_UNREACHABLE();
+    return {};
 }
 
 bool Resolver::lookupServices(QStringList serviceTypes)
@@ -212,146 +136,57 @@ bool Resolver::lookupServices(QStringList serviceTypes)
 
 bool Resolver::lookup(Message query)
 {
-    if (const auto data = query.data(); !m_queries.contains(data)) {
-        m_queries.append(std::move(data));
-        return true;
+    return addQuery(query.data());
+}
+
+quint16 Resolver::port() const
+{
+    return s_mdnsPort;
+}
+
+bool Resolver::lookupHostNames(QStringList hostNames)
+{
+    auto message = qnc::mdns::Message{};
+
+    for (const auto &name: hostNames) {
+        message.addQuestion({qualifiedHostName(name, m_domain).toLatin1(), qnc::mdns::Message::A});
+        message.addQuestion({qualifiedHostName(name, m_domain).toLatin1(), qnc::mdns::Message::AAAA});
     }
 
-    return false;
+    return lookup(message);
 }
 
-bool Resolver::isOwnMessage(QNetworkDatagram message) const
+void Resolver::processDatagram(const QNetworkDatagram &datagram)
 {
-    if (message.senderPort() != s_mdnsPort)
-        return false;
-    if (socketForAddress(message.senderAddress()))
-        return false;
+    const auto message = qnc::mdns::Message{datagram.data()};
 
-    return m_queries.contains(message.data());
-}
+    auto resolvedAddresses = std::unordered_map<QByteArray, QList<QHostAddress>>{};
+    auto resolvedServices = std::unordered_map<QByteArray, ServiceRecord>{};
+    auto resolvedText = std::unordered_map<QByteArray, QByteArray>{};
 
-QUdpSocket *Resolver::socketForAddress(QHostAddress address) const
-{
-    const auto it = std::find_if(m_sockets.begin(), m_sockets.end(), isSocketForAddress(std::move(address)));
-    if (it != m_sockets.end())
-        return *it;
+    for (auto i = 0; i < message.responseCount(); ++i) {
+        const auto response = message.response(i);
 
-    return nullptr;
-}
-
-void Resolver::scanNetworkInterfaces()
-{
-    auto newSocketList = QList<QUdpSocket *>{};
-
-    const auto allInterfaces = QNetworkInterface::allInterfaces();
-    for (const auto &iface: allInterfaces) {
-        if (!isSupportedInterface(iface))
-            continue;
-
-        const auto addressEntries = iface.addressEntries();
-        for (const auto &entry: addressEntries) {
-            if (!isLinkLocalAddress(entry.ip()))
-                continue;
-
-            if (const auto socket = socketForAddress(entry.ip())) {
-                newSocketList.append(socket);
-                continue;
-            }
-
-            qCInfo(lcResolver) << "Creating socket for" << entry.ip();
-            auto socket = std::make_unique<QUdpSocket>(this);
-
-            if (!socket->bind(entry.ip(), s_mdnsPort, QUdpSocket::ShareAddress | QUdpSocket::ReuseAddressHint)) {
-                qCWarning(lcResolver, "Could not bind mDNS socket to %ls: %ls",
-                          qUtf16Printable(entry.ip().toString()),
-                          qUtf16Printable(socket->errorString()));
-                continue;
-            }
-
-            const auto group = multicastGroup(socket.get());
-            if (socket->joinMulticastGroup(group, iface)) {
-                qCDebug(lcResolver, "Multicast group %ls joined on %ls",
-                        qUtf16Printable(group.toString()),
-                        qUtf16Printable(iface.name()));
-            } else if (socket->error() != QUdpSocket::UnknownSocketError) {
-                qCWarning(lcResolver, "Could not join multicast group %ls on %ls: %ls",
-                          qUtf16Printable(group.toString()),
-                          qUtf16Printable(iface.name()),
-                          qUtf16Printable(socket->errorString()));
-                continue;
-            }
-
-            connect(socket.get(), &QUdpSocket::readyRead,
-                    this, [this, socket = socket.get()] {
-                onReadyRead(socket);
-            });
-
-            socket->setMulticastInterface(iface);
-            newSocketList.append(socket.release());
+        if (const auto address = response.address(); !address.isNull()) {
+            auto &knownAddresses = resolvedAddresses[response.name().toByteArray()];
+            if (!knownAddresses.contains(address))
+                knownAddresses.append(address);
+        } else if (const auto service = response.service(); !service.isNull()) {
+            resolvedServices.insert({response.name().toByteArray(), service});
+        } else if (const auto text = response.text(); !text.isNull()) {
+            resolvedText.insert({response.name().toByteArray(), text});
         }
     }
 
-    const auto oldSocketList = std::exchange(m_sockets, newSocketList);
-    for (const auto socket: oldSocketList) {
-        if (!m_sockets.contains(socket)) {
-            qCDebug(lcResolver, "Destroying socket for address %ls",
-                    qUtf16Printable(socket->localAddress().toString()));
-            delete socket;
-        }
+    for (const auto &[name, service]: resolvedServices) {
+        auto info = parseTxtRecord(resolvedText[name]);
+        emit serviceResolved({m_domain, name, service, std::move(info)});
     }
-}
 
-void Resolver::submitQueries() const
-{
-    for (const auto socket: m_sockets) {
-        const auto group = multicastGroup(socket);
+    for (const auto &[name, addresses]: resolvedAddresses)
+        emit hostNameResolved(normalizedHostName(name, m_domain), addresses);
 
-        for (const auto &data: m_queries)
-            socket->writeDatagram(data, group, 5353);
-    }
-}
-
-void Resolver::onReadyRead(QUdpSocket *socket)
-{
-    while (socket->hasPendingDatagrams()) {
-        if (const auto received = socket->receiveDatagram(); !isOwnMessage(received)) {
-            const auto message = qnc::mdns::Message{received.data()};
-
-            auto resolvedAddresses = std::unordered_map<QByteArray, QList<QHostAddress>>{};
-            auto resolvedServices = std::unordered_map<QByteArray, ServiceRecord>{};
-            auto resolvedText = std::unordered_map<QByteArray, QByteArray>{};
-
-            for (auto i = 0; i < message.responseCount(); ++i) {
-                const auto response = message.response(i);
-
-                if (const auto address = response.address(); !address.isNull()) {
-                    auto &knownAddresses = resolvedAddresses[response.name().toByteArray()];
-                    if (!knownAddresses.contains(address))
-                        knownAddresses.append(address);
-                } else if (const auto service = response.service(); !service.isNull()) {
-                    resolvedServices.insert({response.name().toByteArray(), service});
-                } else if (const auto text = response.text(); !text.isNull()) {
-                    resolvedText.insert({response.name().toByteArray(), text});
-                }
-            }
-
-            for (const auto &[name, service]: resolvedServices) {
-                auto info = parseTxtRecord(resolvedText[name]);
-                emit serviceResolved({m_domain, name, service, std::move(info)});
-            }
-
-            for (const auto &[name, addresses]: resolvedAddresses)
-                emit hostNameResolved(normalizedHostName(name, m_domain), addresses);
-
-            emit messageReceived(std::move(message));
-        }
-    }
-}
-
-void Resolver::onTimeout()
-{
-    scanNetworkInterfaces();
-    submitQueries();
+    emit messageReceived(std::move(message));
 }
 
 } // namespace qnc::mdns
