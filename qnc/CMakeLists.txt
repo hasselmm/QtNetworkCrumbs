@@ -1,7 +1,9 @@
 qnc_add_library(
-    QtNetworkCrumbs STATIC
-    qncliterals.h
+    QncCore STATIC
     qncliterals.cpp
+    qncliterals.h
+    qncparse.cpp
+    qncparse.h
 )
 
-target_link_libraries(QtNetworkCrumbs PUBLIC Qt::Network)
+target_link_libraries(QncCore PUBLIC Qt::Network)
