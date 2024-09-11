@@ -23,3 +23,4 @@ endfunction()
 
 add_testcase(tst_mdnsmessages.cpp LIBRARIES QncMdns)
 add_testcase(tst_mdnsresolver.cpp LIBRARIES QncMdns)
+add_testcase(tst_qncparse.cpp     LIBRARIES QncCore)
