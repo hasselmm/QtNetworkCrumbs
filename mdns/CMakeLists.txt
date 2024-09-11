@@ -1,17 +1,17 @@
 qnc_add_library(
-    MDNSResolver STATIC
+    QncMdns STATIC
     mdnsmessage.cpp
     mdnsmessage.h
     mdnsresolver.cpp
     mdnsresolver.h
 )
 
-target_link_libraries(MDNSResolver PUBLIC QtNetworkCrumbs)
+target_link_libraries(QncMdns PUBLIC QncCore)
 
 
 if (NOT IOS) # FIXME Figure out code signing on Github
     qnc_add_executable(MDNSResolverDemo TYPE tool mdnsresolverdemo.cpp)
-    target_link_libraries(MDNSResolverDemo PRIVATE MDNSResolver)
+    target_link_libraries(MDNSResolverDemo PRIVATE QncMdns)
 endif()
 
 #if (WIN32)
