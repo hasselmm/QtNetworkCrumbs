@@ -1,0 +1,2 @@
+qnc_add_executable(upnpparsertest upnpparsertest.cpp)
+target_link_libraries(upnpparsertest PRIVATE QncUpnp)

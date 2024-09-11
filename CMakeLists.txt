@@ -99,6 +99,7 @@ add_subdirectory(http)
 add_subdirectory(mdns)
 add_subdirectory(qnc)
 add_subdirectory(ssdp)
+add_subdirectory(upnp)
 add_subdirectory(xml)
 
 if (NOT IOS) # FIXME Figure out code signing on Github
