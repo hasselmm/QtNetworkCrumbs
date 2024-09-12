@@ -1,3 +1,7 @@
+/* QtNetworkCrumbs - Some networking toys for Qt
+ * Copyright (C) 2023 Mathias Hasselmann
+ */
+
 #include "qncparse.h"
 
 #include <QTest>
@@ -116,7 +120,7 @@ private slots:
     }
 };
 
-} // namespace qnc::mdns::tests
+} // namespace qnc::core::tests
 
 QTEST_GUILESS_MAIN(qnc::core::tests::ParseTest)
 
