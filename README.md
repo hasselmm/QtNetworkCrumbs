@@ -2,7 +2,7 @@
 
 ## What is this?
 
-This are some tiny networking toys written in C++17 for [Qt][qt-opensource].
+This are some tiny networking toys for [Qt][qt-opensource] based applications, written in C++17.
 
 ### A minimal mDNS-SD resolver
 
@@ -14,9 +14,12 @@ With this library discovering DNS-SD services is as simple as this:
 
 ```C++
 const auto resolver = new mdns::Resolver;
-connect(resolver, &mdns::Resolver::serviceResolved, this, [](const auto &service) {
+
+connect(resolver, &mdns::Resolver::serviceResolved,
+        this, [](const auto &service) {
     qInfo() << "mDNS service found:" << service;
 });
+
 resolver->lookupServices({"_http._tcp"_L1, "_googlecast._tcp"_L1});
 ```
 
@@ -32,9 +35,12 @@ With this library discovering SSDP services is as simple as this:
 
 ```C++
 const auto resolver = new ssdp::Resolver;
-connect(resolver, &ssdp::Resolver::serviceFound, this, [](const auto &service) {
+
+connect(resolver, &ssdp::Resolver::serviceFound,
+        this, [](const auto &service) {
     qInfo() << "SSDP service found:" << service;
 });
+
 resolver->lookupService("ssdp:all"_L1);
 ```
 
