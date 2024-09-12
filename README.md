@@ -47,6 +47,91 @@ resolver->lookupService("ssdp:all"_L1);
 The C++ definition of the SSDP resolver can be found in [ssdpresolver.h](ssdp/ssdpresolver.h).
 A slightly more complex example can be found in [ssdpresolverdemo.cpp](ssdp/ssdpresolverdemo.cpp).
 
+### A declarative XML parser
+
+Parsing [XML documents][XML] can is pretty annoying.
+Maybe it is annoying less for you if you got a decent declarative XML parser at your hand.
+The declarative XML parser provided here easily turns such XML
+
+```XML
+<?xml version="1.0"?>
+<root>
+  <version>
+    <major>1</major>
+    <minor>2</minor>
+  </version>
+
+  <icons>
+    <icon>
+      <mimetype>image/png</mimetype>
+      <width>384</width>
+      <height>256</height>
+      <url>/icons/test.png</url>
+    </icon>
+
+    <icon>
+      <mimetype>image/webp</mimetype>
+      <width>768</width>
+      <height>512</height>
+      <url>/icons/test.webp</url>
+    </icon>
+  </icons>
+</root>
+```
+
+into such C++ data structures
+
+```C++
+struct TestResult
+{
+    struct Icon
+    {
+        QString mimeType = {};
+        QSize   size     = {};
+        QUrl    url      = {};
+    };
+
+    QVersionNumber version = {};
+    QList<Icon>    icons   = {};
+};
+```
+
+with as little as that:
+
+```C++
+auto result = TestResult{};
+const auto states = StateTable {
+    {
+        State::Document, {
+            {u"root",       transition<State::Root>()},
+        }
+    }, {
+        State::Root, {
+            {u"version",    transition<State::Version>()},
+            {u"icons",      transition<State::IconList>()},
+        }
+    }, {
+        State::Version, {
+            {u"major",      setField<&TestResult::version, VersionSegment::Major>(result)},
+            {u"minor",      setField<&TestResult::version, VersionSegment::Minor>(result)},
+        }
+    }, {
+        State::IconList, {
+            {u"icon",       transition<State::Icon, &TestResult::icons>(result)},
+        }
+    }, {
+        State::Icon, {
+            {u"mimetype",   setField<&TestResult::Icon::mimeType>(result)},
+            {u"width",      setField<&TestResult::Icon::size, &QSize::setWidth>(result)},
+            {u"height",     setField<&TestResult::Icon::size, &QSize::setHeight>(result)},
+            {u"url",        setField<&TestResult::Icon::url>(result)},
+        }
+    }
+};
+
+parse(lcExample(), State::Document, {{xmlNamespace, states}});
+```
+
 ### A compressing HTTP server
 
 This library also contains a very, very minimal [compressing HTTP/1.1 server](http/compressingserver.cpp).
@@ -81,3 +166,4 @@ Licensed under MIT License
 [mDNS]:             https://en.wikipedia.org/wiki/Multicast_DNS
 [SSDP]:             https://en.wikipedia.org/wiki/Simple_Service_Discovery_Protocol
 [UPnP]:             https://en.wikipedia.org/wiki/Universal_Plug_and_Play
+[XML]:              https://en.wikipedia.org/wiki/XML
