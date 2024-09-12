@@ -116,7 +116,7 @@ private slots:
     }
 };
 
-} // namespace qnc::mdns::tests
+} // namespace qnc::core::tests
 
 QTEST_GUILESS_MAIN(qnc::core::tests::ParseTest)
 
