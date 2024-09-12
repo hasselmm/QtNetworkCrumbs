@@ -51,13 +51,13 @@ public:
 
         const auto resolver = new Resolver{this};
 
-        connect(resolver, &Resolver::hostNameResolved,
+        connect(resolver, &Resolver::hostNameFound,
                 this, [](const auto hostName, const auto addresses) {
             qCInfo(lcDemo).verbosity(QDebug::MinimumVerbosity)
                     << "host resolved:" << hostName << "=>" << addresses;
         });
 
-        connect(resolver, &Resolver::serviceResolved,
+        connect(resolver, &Resolver::serviceFound,
                 this, [](const auto service) {
             qCInfo(lcDemo).verbosity(QDebug::MinimumVerbosity)
                     << "service resolved:" << service;

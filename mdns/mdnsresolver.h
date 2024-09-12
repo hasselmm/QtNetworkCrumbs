@@ -62,8 +62,8 @@ public slots:
 signals:
     void domainChanged(QString domain);
 
-    void hostNameResolved(QString hostname, QList<QHostAddress> addresses);
-    void serviceResolved(qnc::mdns::ServiceDescription service);
+    void hostNameFound(QString hostname, QList<QHostAddress> addresses);
+    void serviceFound(qnc::mdns::ServiceDescription service);
     void messageReceived(qnc::mdns::Message message);
 
 protected:

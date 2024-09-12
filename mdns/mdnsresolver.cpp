@@ -180,11 +180,11 @@ void Resolver::processDatagram(const QNetworkDatagram &datagram)
 
     for (const auto &[name, service]: resolvedServices) {
         auto info = parseTxtRecord(resolvedText[name]);
-        emit serviceResolved({m_domain, name, service, std::move(info)});
+        emit serviceFound({m_domain, name, service, std::move(info)});
     }
 
     for (const auto &[name, addresses]: resolvedAddresses)
-        emit hostNameResolved(normalizedHostName(name, m_domain), addresses);
+        emit hostNameFound(normalizedHostName(name, m_domain), addresses);
 
     emit messageReceived(std::move(message));
 }
