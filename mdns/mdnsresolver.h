@@ -1,8 +1,8 @@
 /* QtNetworkCrumbs - Some networking toys for Qt
  * Copyright (C) 2019-2024 Mathias Hasselmann
  */
-#ifndef MDNS_MDNSRESOLVER_H
-#define MDNS_MDNSRESOLVER_H
+#ifndef QNCMDNS_MDNSRESOLVER_H
+#define QNCMDNS_MDNSRESOLVER_H
 
 #include "qncresolver.h"
 
@@ -79,4 +79,4 @@ private:
 
 QDebug operator<<(QDebug debug, const qnc::mdns::ServiceDescription &service);
 
-#endif // MDNS_MDNSRESOLVER_H
+#endif // QNCMDNS_MDNSRESOLVER_H
