@@ -4,6 +4,8 @@ qnc_add_library(
     mdnsmessage.h
     mdnsresolver.cpp
     mdnsresolver.h
+    mdnsurlfinder.cpp
+    mdnsurlfinder.h
 )
 
 target_link_libraries(QncMdns PUBLIC QncCore)

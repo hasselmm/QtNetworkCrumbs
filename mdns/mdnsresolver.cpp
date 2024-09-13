@@ -5,6 +5,7 @@
 
 // QtNetworkCrumbs headers
 #include "mdnsmessage.h"
+#include "mdnsurlfinder.h"
 #include "qncliterals.h"
 
 // Qt headers
@@ -79,7 +80,7 @@ auto parseTxtRecord(const QByteArray &txtRecord)
 
 ServiceDescription::ServiceDescription(QString domain, QByteArray name, ServiceRecord service, QStringList info)
     : m_name{normalizedHostName(name, domain)}
-    , m_target{normalizedHostName(service.target().toByteArray(), domain)}
+    , m_target{qualifiedHostName(service.target().toString(), domain)}
     , m_port{service.port()}
     , m_priority{service.priority()}
     , m_weight{service.weight()}
@@ -89,6 +90,23 @@ ServiceDescription::ServiceDescription(QString domain, QByteArray name, ServiceR
         m_type = m_name.mid(separator + 1);
         m_name.truncate(separator);
     }
+}
+
+QString ServiceDescription::info(const QString &key) const
+{
+    const auto &prefix = key + '='_L1;
+
+    for (const auto &info: m_info) {
+        if (info.startsWith(prefix))
+            return info.mid(prefix.length());
+    }
+
+    return {};
+}
+
+QList<QUrl> ServiceDescription::locations() const
+{
+    return UrlFinder::find(*this);
 }
 
 Resolver::Resolver(QObject *parent)

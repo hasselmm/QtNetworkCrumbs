@@ -266,6 +266,7 @@ public:
     explicit Name(QHostAddress address);
 
     QByteArray toByteArray() const;
+    QString toString() const;
 
     int labelCount() const;
     Label label(int i) const;

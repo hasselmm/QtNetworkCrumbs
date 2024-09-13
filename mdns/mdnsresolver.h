@@ -20,6 +20,7 @@ class ServiceDescription
     Q_GADGET
 
 public:
+    ServiceDescription() = default;
     ServiceDescription(QString domain, QByteArray name, ServiceRecord service, QStringList info);
 
     auto name() const { return m_name; };
@@ -29,6 +30,9 @@ public:
     auto weight() const { return m_weight; }
     auto port() const { return m_port; }
     auto info() const { return m_info; }
+
+    QString info(const QString &key) const;
+    QList<QUrl> locations() const;
 
 private:
     QString m_name;
