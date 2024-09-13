@@ -108,6 +108,11 @@ inline auto operator ""_url(const char *str, std::size_t len)
     return QUrl::fromEncoded({str, static_cast<compat::lentype>(len)});
 }
 
+inline auto operator ""_hex(const char *str, std::size_t len)
+{
+    return QByteArray::fromHex({str, static_cast<compat::lentype>(len)});
+}
+
 } // namespace literals
 
 using namespace literals;

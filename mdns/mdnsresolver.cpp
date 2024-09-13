@@ -5,6 +5,7 @@
 
 // QtNetworkCrumbs headers
 #include "mdnsmessage.h"
+#include "mdnsurlfinder.h"
 #include "qncliterals.h"
 
 // Qt headers
@@ -101,6 +102,11 @@ QString ServiceDescription::info(const QString &key) const
     }
 
     return {};
+}
+
+QList<QUrl> ServiceDescription::locations() const
+{
+    return UrlFinder::find(*this);
 }
 
 Resolver::Resolver(QObject *parent)

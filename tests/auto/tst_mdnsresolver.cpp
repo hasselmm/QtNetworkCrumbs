@@ -3,7 +3,9 @@
  */
 
 // QtNetworkCrumbs headers
+#include "mdnsmessage.h"
 #include "mdnsresolver.h"
+#include "mdnsurlfinder.h"
 #include "qncliterals.h"
 
 // Qt headers
@@ -20,6 +22,8 @@ inline bool qCompare(const QSignalSpy &t1, const QList<QVariantList> &t2,
 }
 
 } // namespace QTest
+
+Q_DECLARE_METATYPE(qnc::mdns::ServiceDescription)
 
 namespace qnc::mdns::tests {
 
@@ -149,6 +153,91 @@ private slots:
         QCOMPARE(resolver.domain(), "local"_L1);
         QVERIFY(!resolver.lookupServices({"_ipp._tcp.local"_L1}));
         QVERIFY(!resolver.lookupServices({"_ipp._tcp.local."_L1}));
+    }
+
+    void serviceLocations_data()
+    {
+        QTest::addColumn<ServiceDescription>("service");
+        QTest::addColumn<QString>           ("expectedType");
+        QTest::addColumn<QString>           ("expectedTarget");
+        QTest::addColumn<int>               ("expectedPort");
+        QTest::addColumn<QList<QUrl>>       ("expectedLocations");
+
+        const auto httpRecord    = ServiceRecord{"0000|0000|0050|06<66 72 69 64 67 65>00"_hex, 0};
+        const auto httpsRecord   = ServiceRecord{"0000|0000|01bb|06<66 72 69 64 67 65>00"_hex, 0};
+        const auto mqttRecord    = ServiceRecord{"0000|0000|075b|07<69 6f 74 73 69 6e 6b>00"_hex, 0};
+        const auto printerRecord = ServiceRecord{"0000|0000|0277|07<70 72 69 6e 74 65 72>00"_hex, 0};
+        const auto customRecord  = ServiceRecord{"0000|0000|affe|06<63 75 73 74 6f 6d>00"_hex, 0};
+        const auto unknownRecord = ServiceRecord{"0000|0000|7353|06<6a 61 71 75 65 73>00"_hex, 0};
+
+        QTest::newRow("http-default")
+                << ServiceDescription{"local"_L1, "fridge._http._tcp.local.",
+                   httpRecord, {"path=/webapp/"_L1}}
+                << "_http._tcp" << "fridge.local" << 80
+                << QList{"http://fridge.local/webapp/"_url};
+
+        QTest::newRow("http-custom")
+                << ServiceDescription{"local"_L1, "fridge._http._tcp.local.",
+                   httpsRecord, {"path=/webapp"_L1, "u=test"_L1}}
+                << "_http._tcp" << "fridge.local" << 443
+                << QList{"http://test@fridge.local:443/webapp"_url};
+
+        QTest::newRow("https-default")
+                << ServiceDescription{"local"_L1, "fridge._https._tcp.local.",
+                   httpsRecord, {"path=webapp"_L1}}
+                << "_https._tcp" << "fridge.local" << 443
+                << QList{"https://fridge.local/webapp"_url};
+
+        QTest::newRow("https-custom")
+                << ServiceDescription{"local"_L1, "fridge._https._tcp.local.",
+                   httpRecord, {"u=user"_L1, "p=secret"_L1}}
+                << "_https._tcp" << "fridge.local" << 80
+                << QList{"https://user:secret@fridge.local:80/"_url};
+
+        QTest::newRow("mqtt")
+                << ServiceDescription{"local"_L1, "iotsink._mqtt._tcp.local.",
+                   mqttRecord, {"topic=test"_L1}}
+                << "_mqtt._tcp" << "iotsink.local" << 1883
+                << QList{"mqtt://iotsink.local/test"_url};
+
+        QTest::newRow("ipp")
+                << ServiceDescription{"local"_L1, "printer._ipp._tcp.local.", printerRecord, {
+                   "rp=ipp"_L1, "adminurl=https://printer.local/"_L1,
+                    "DUUID=8e17611f-95d7-4398-a588-1a8f1438c3ba"_L1}}
+                << "_ipp._tcp" << "printer.local" << 631
+                << QList{"ipp://printer.local/ipp"_url,
+                   "https://printer.local/"_url,
+                   "urn:uuid:8e17611f-95d7-4398-a588-1a8f1438c3ba"_url};
+
+        QTest::newRow("custom")
+                << ServiceDescription{"local"_L1, "custom._marche._tcp.local.",
+                   customRecord, {"fruits=cherries"_L1}}
+                << "_marche._tcp" << "custom.local" << 45054
+                << QList{"marche://custom.local/cherries"_url};
+
+        QTest::newRow("unknown")
+                << ServiceDescription{"local"_L1, "jaques._inconnu._tcp.local.",
+                   unknownRecord, {"legume=chou"_L1}}
+                << "_inconnu._tcp" << "jaques.local" << 29523
+                << QList<QUrl>{};
+
+        UrlFinder::add("_marche._tcp"_L1, [](const auto &) {
+            return QList{"marche://custom.local/cherries"_url};
+        });
+    }
+
+    void serviceLocations()
+    {
+        const QFETCH(ServiceDescription, service);
+        const QFETCH(QString,            expectedType);
+        const QFETCH(QString,            expectedTarget);
+        const QFETCH(int,                expectedPort);
+        const QFETCH(QList<QUrl>,        expectedLocations);
+
+        QCOMPARE(service.type(),      expectedType);
+        QCOMPARE(service.target(),    expectedTarget);
+        QCOMPARE(service.port(),      expectedPort);
+        QCOMPARE(service.locations(), expectedLocations);
     }
 };
 
