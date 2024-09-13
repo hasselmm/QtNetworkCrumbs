@@ -1,8 +1,8 @@
 /* QtNetworkCrumbs - Some networking toys for Qt
  * Copyright (C) 2019-2024 Mathias Hasselmann
  */
-#ifndef MDNS_MDNSRESOLVER_H
-#define MDNS_MDNSRESOLVER_H
+#ifndef QNCMDNS_MDNSRESOLVER_H
+#define QNCMDNS_MDNSRESOLVER_H
 
 #include "qncresolver.h"
 
@@ -62,8 +62,8 @@ public slots:
 signals:
     void domainChanged(QString domain);
 
-    void hostNameResolved(QString hostname, QList<QHostAddress> addresses);
-    void serviceResolved(qnc::mdns::ServiceDescription service);
+    void hostNameFound(QString hostname, QList<QHostAddress> addresses);
+    void serviceFound(qnc::mdns::ServiceDescription service);
     void messageReceived(qnc::mdns::Message message);
 
 protected:
@@ -79,4 +79,4 @@ private:
 
 QDebug operator<<(QDebug debug, const qnc::mdns::ServiceDescription &service);
 
-#endif // MDNS_MDNSRESOLVER_H
+#endif // QNCMDNS_MDNSRESOLVER_H

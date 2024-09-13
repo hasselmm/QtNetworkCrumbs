@@ -15,7 +15,7 @@ With this library discovering DNS-SD services is as simple as this:
 ```C++
 const auto resolver = new mdns::Resolver;
 
-connect(resolver, &mdns::Resolver::serviceResolved,
+connect(resolver, &mdns::Resolver::serviceFound,
         this, [](const auto &service) {
     qInfo() << "mDNS service found:" << service;
 });

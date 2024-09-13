@@ -1,8 +1,8 @@
 /* QtNetworkCrumbs - Some networking toys for Qt
  * Copyright (C) 2019-2024 Mathias Hasselmann
  */
-#ifndef MDNS_MDNSMESSAGE_H
-#define MDNS_MDNSMESSAGE_H
+#ifndef QNCMDNS_MDNSMESSAGE_H
+#define QNCMDNS_MDNSMESSAGE_H
 
 #include <QMetaType>
 #include <QByteArray>
@@ -369,4 +369,4 @@ QDebug operator<<(QDebug, const qnc::mdns::Question &);
 QDebug operator<<(QDebug, const qnc::mdns::Resource &);
 QDebug operator<<(QDebug, const qnc::mdns::ServiceRecord &);
 
-#endif // MDNS_MDNSMESSAGE_H
+#endif // QNCMDNS_MDNSMESSAGE_H
