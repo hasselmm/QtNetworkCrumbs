@@ -69,7 +69,7 @@ constexpr auto operator ""_L1(const char ch)
     return QLatin1Char{ch};
 }
 
-constexpr auto operator ""_L1(const char *str, size_t len)
+constexpr auto operator ""_L1(const char *str, std::size_t len)
 {
     return QLatin1String{str, static_cast<qsizetype>(len)};
 }
@@ -81,29 +81,29 @@ constexpr auto operator ""_L1(const char ch)
     return QLatin1Char{ch};
 }
 
-constexpr auto operator ""_L1(const char *str, size_t len)
+constexpr auto operator ""_L1(const char *str, std::size_t len)
 {
     return QLatin1String{str, static_cast<compat::lentype>(len)};
 }
 
-inline auto operator ""_ba(const char *str, size_t len)
+inline auto operator ""_ba(const char *str, std::size_t len)
 {
     return QByteArray{str, static_cast<compat::lentype>(len)};
 }
 
 #endif // QT_VERSION < QT_VERSION_CHECK(6,4,0)
 
-constexpr auto operator ""_baview(const char *str, size_t len)
+constexpr auto operator ""_baview(const char *str, std::size_t len)
 {
     return compat::ByteArrayView{str, static_cast<compat::lentype>(len)};
 }
 
-inline auto operator ""_iso8601(const char *str, size_t len)
+inline auto operator ""_iso8601(const char *str, std::size_t len)
 {
     return QDateTime::fromString(QLatin1String{str, static_cast<compat::lentype>(len)}, Qt::ISODate);
 }
 
-inline auto operator ""_url(const char *str, size_t len)
+inline auto operator ""_url(const char *str, std::size_t len)
 {
     return QUrl::fromEncoded({str, static_cast<compat::lentype>(len)});
 }
