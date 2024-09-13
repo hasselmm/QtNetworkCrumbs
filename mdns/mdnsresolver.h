@@ -30,6 +30,8 @@ public:
     auto port() const { return m_port; }
     auto info() const { return m_info; }
 
+    QString info(const QString &key) const;
+
 private:
     QString m_name;
     QString m_type;

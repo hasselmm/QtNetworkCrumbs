@@ -91,6 +91,18 @@ ServiceDescription::ServiceDescription(QString domain, QByteArray name, ServiceR
     }
 }
 
+QString ServiceDescription::info(const QString &key) const
+{
+    const auto &prefix = key + '='_L1;
+
+    for (const auto &info: m_info) {
+        if (info.startsWith(prefix))
+            return info.mid(prefix.length());
+    }
+
+    return {};
+}
+
 Resolver::Resolver(QObject *parent)
     : core::MulticastResolver{parent}
     , m_domain{"local"_L1}
