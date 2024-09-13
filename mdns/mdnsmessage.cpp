@@ -147,6 +147,11 @@ QByteArray Name::toByteArray() const
     return name;
 }
 
+QString Name::toString() const
+{
+    return QString::fromUtf8(toByteArray());
+}
+
 int Name::labelCount() const
 {
     for (auto i = 0;; ++i) {
