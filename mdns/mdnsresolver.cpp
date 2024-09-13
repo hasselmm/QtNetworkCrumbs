@@ -79,7 +79,7 @@ auto parseTxtRecord(const QByteArray &txtRecord)
 
 ServiceDescription::ServiceDescription(QString domain, QByteArray name, ServiceRecord service, QStringList info)
     : m_name{normalizedHostName(name, domain)}
-    , m_target{normalizedHostName(service.target().toByteArray(), domain)}
+    , m_target{qualifiedHostName(service.target().toString(), domain)}
     , m_port{service.port()}
     , m_priority{service.priority()}
     , m_weight{service.weight()}
