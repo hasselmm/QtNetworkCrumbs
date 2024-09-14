@@ -2,7 +2,11 @@
 
 ## What is this?
 
-This are some tiny networking toys for [Qt][qt-opensource] based applications, written in C++17.
+This are some tiny networking toys for [Qt][qt-opensource] based applications, written in C++17:
+
+* [A minimal mDNS-SD resolver](#a-minimal-mdns-sd-resolver)
+* [A minimal SSDP resolver](#a-minimal-ssdp-resolver)
+* [A declarative XML parser](#a-declarative-xml-parser)
 
 ### A minimal mDNS-SD resolver
 
