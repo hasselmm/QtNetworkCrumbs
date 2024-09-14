@@ -119,10 +119,13 @@ QString ParserBase::AbstractContext::currentStateName() const
 
 bool ParserBase::parse(const QLoggingCategory &category, AbstractContext &context)
 {
+    qCDebug(category, "Starting ==> %ls",
+            qUtf16Printable(context.currentStateName()));
+
     while (!m_xml->atEnd()
            && !m_xml->hasError()
            && !context.isEmpty()) {
-        const auto initialState = context.currentState();
+        const auto currentState = context.currentState();
 
         switch (m_xml->readNext()) {
         case QXmlStreamReader::StartElement:
@@ -140,7 +143,7 @@ bool ParserBase::parse(const QLoggingCategory &category, AbstractContext &contex
                                   arg(m_xml->name(), context.currentStateName()));
             } else if (nextState != context.currentState()) {
                 reportTransition(category, Entering, m_xml,
-                                 context.stateName(initialState),
+                                 context.stateName(currentState),
                                  context.stateName(nextState.value()));
 
                 context.enterState(nextState.value());
@@ -151,9 +154,14 @@ bool ParserBase::parse(const QLoggingCategory &category, AbstractContext &contex
         case QXmlStreamReader::EndElement:
             context.leaveState();
 
-            reportTransition(category, Leaving, m_xml,
-                             context.stateName(context.currentState()),
-                             context.stateName(initialState));
+            if (context.isEmpty()) {
+                qCDebug(category, "%ls ==> leaving",
+                        qUtf16Printable(context.stateName(currentState)));
+            } else {
+                reportTransition(category, Leaving, m_xml,
+                                 context.stateName(context.currentState()),
+                                 context.stateName(currentState));
+            }
 
             break;
 
