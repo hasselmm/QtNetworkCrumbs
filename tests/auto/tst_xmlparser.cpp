@@ -121,10 +121,10 @@ private slots:
         const QFETCH(TestResult,              expectedResult);
 
         auto reader = QXmlStreamReader{xml};
-        auto parser = Parser<ParserTest>{&reader};
+        auto parser = Parser<State>{&reader};
         auto result = TestResult{};
 
-        const Parser<ParserTest>::StateTable states = {
+        const Parser<State>::StateTable states = {
             {
                 State::Document, {
                     {u"root",       parser.transition<State::Root>()},

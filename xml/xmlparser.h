@@ -92,13 +92,13 @@ protected:
     QXmlStreamReader *const m_xml;
 };
 
-template <class StateHolder>
+template <typename StateEnum>
 class Parser : public ParserBase
 {
 public:
-    static_assert(std::is_enum_v<typename StateHolder::State>);
+    static_assert(std::is_enum_v<StateEnum>);
 
-    using State          = typename StateHolder::State;
+    using State          = StateEnum;
     using Processing     = std::function<void()>;
     using Transition     = std::function<State()>;
     using ParseStep      = std::variant<std::monostate, Transition, Processing>;
