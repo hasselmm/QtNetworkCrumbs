@@ -136,8 +136,8 @@ private slots:
                 }
             }, {
                 State::Version, {
-                    {u"major",      parser.setField<&TestResult::version, VersionSegment::Major>(result)},
-                    {u"minor",      parser.setField<&TestResult::version, VersionSegment::Minor>(result)},
+                    {u"major",      parser.assign<&TestResult::version, VersionSegment::Major>(result)},
+                    {u"minor",      parser.assign<&TestResult::version, VersionSegment::Minor>(result)},
                 }
             }, {
                 State::IconList, {
@@ -145,10 +145,10 @@ private slots:
                 }
             }, {
                 State::Icon, {
-                    {u"mimetype",   parser.setField<&TestResult::Icon::mimeType>(result)},
-                    {u"width",      parser.setField<&TestResult::Icon::size, &QSize::setWidth>(result)},
-                    {u"height",     parser.setField<&TestResult::Icon::size, &QSize::setHeight>(result)},
-                    {u"url",        parser.setField<&TestResult::Icon::url>(result)},
+                    {u"mimetype",   parser.assign<&TestResult::Icon::mimeType>(result)},
+                    {u"width",      parser.assign<&TestResult::Icon::size, &QSize::setWidth>(result)},
+                    {u"height",     parser.assign<&TestResult::Icon::size, &QSize::setHeight>(result)},
+                    {u"url",        parser.assign<&TestResult::Icon::url>(result)},
                 }
             }
         };

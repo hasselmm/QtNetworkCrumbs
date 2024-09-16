@@ -116,8 +116,8 @@ const auto states = StateTable {
         }
     }, {
         State::Version, {
-            {u"major",      setField<&TestResult::version, VersionSegment::Major>(result)},
-            {u"minor",      setField<&TestResult::version, VersionSegment::Minor>(result)},
+            {u"major",      assign<&TestResult::version, VersionSegment::Major>(result)},
+            {u"minor",      assign<&TestResult::version, VersionSegment::Minor>(result)},
         }
     }, {
         State::IconList, {
@@ -125,10 +125,10 @@ const auto states = StateTable {
         }
     }, {
         State::Icon, {
-            {u"mimetype",   setField<&TestResult::Icon::mimeType>(result)},
-            {u"width",      setField<&TestResult::Icon::size, &QSize::setWidth>(result)},
-            {u"height",     setField<&TestResult::Icon::size, &QSize::setHeight>(result)},
-            {u"url",        setField<&TestResult::Icon::url>(result)},
+            {u"mimetype",   assign<&TestResult::Icon::mimeType>(result)},
+            {u"width",      assign<&TestResult::Icon::size, &QSize::setWidth>(result)},
+            {u"height",     assign<&TestResult::Icon::size, &QSize::setHeight>(result)},
+            {u"url",        assign<&TestResult::Icon::url>(result)},
         }
     }
 };

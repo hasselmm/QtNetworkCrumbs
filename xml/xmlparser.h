@@ -74,7 +74,7 @@ public:
     {}
 
     template <typename T>
-    Processing run(const std::function<void(T)> &callback)
+    Processing invoke(const std::function<void(T)> &callback)
     {
         return [this, callback] {
             read<T>(callback);
@@ -83,7 +83,7 @@ public:
 
     template <auto field, class Context,
               detail::RequireField<field> = true>
-    Processing setField(Context &context)
+    Processing assign(Context &context)
     {
         return [this, &context] {
             using Value  = detail::ValueType <field>;
@@ -98,7 +98,7 @@ public:
     template <auto field, auto setter, class Context,
               detail::RequireMemberFunction<setter> = true,
               detail::RequireField<field> = true>
-    Processing setField(Context &context)
+    Processing assign(Context &context)
     {
         return [this, &context] {
             using Value  = detail::ArgumentType<setter>;
@@ -112,9 +112,9 @@ public:
 
     template <auto field, VersionSegment segment, class Context,
               detail::RequireField<field> = true>
-    Processing setField(Context &context)
+    Processing assign(Context &context)
     {
-        return run<int>([&context](int number) {
+        return invoke<int>([&context](int number) {
             updateVersion(context.*field, segment, number);
         });
     };
