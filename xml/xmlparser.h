@@ -54,6 +54,9 @@ template <auto field, RequireField<field> = true>
 using ValueType = decltype(MemberTraits::fieldType(field));
 
 template <auto field, RequireField<field> = true>
+using FlagType = typename ValueType<field>::enum_type;
+
+template <auto field, RequireField<field> = true>
 using ObjectType = decltype(MemberTraits::objectType(field));
 
 template <auto member, RequireMemberFunction<member> = true>
@@ -124,6 +127,21 @@ public:
         };
     }
 
+    template <auto field, detail::FlagType<field> flag, class Context,
+              detail::RequireField<field> = true>
+    GenericParser assign(Context &context)
+    {
+        return [this, &context](const QXmlStreamAttribute *attribute) {
+            read<QString>(attribute, [this, &context](QStringView text) {
+                parseFlag(text, [&context](bool enabled) {
+                    using Object = detail::ObjectType<field>;
+                    auto &target = currentObject<Object>(context).*field;
+                    target.setFlag(flag, enabled);
+                });
+            });
+        };
+    }
+
     template <auto field, VersionSegment segment, class Context,
               detail::RequireField<field> = true>
     GenericParser assign(Context &context)
@@ -178,6 +196,8 @@ protected:
 private:
     void parseStartElement(const QLoggingCategory &category, AbstractContext &context);
     void parseEndElement(const QLoggingCategory &category, AbstractContext &context);
+
+    void parseFlag(QStringView text, const std::function<void(bool)> &store);
 
     template <typename T>
     void parseValue(QStringView text, const std::function<void(T)> &store);

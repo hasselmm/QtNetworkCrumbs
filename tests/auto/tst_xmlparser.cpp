@@ -21,6 +21,23 @@ Q_LOGGING_CATEGORY(lcTest, "qnc.xml.tests", QtInfoMsg)
 using xml::qHash;
 #endif // QT_VERSION_MAJOR < 6
 
+enum Option // explicitly not class to test corner cases from implicit boolean conversion
+{
+    A = (1 << 0),
+    B = (1 << 1),
+    C = (1 << 2),
+    D = (1 << 3),
+    E = (1 << 4),
+};
+
+QT_WARNING_PUSH
+QT_WARNING_DISABLE_CLANG("-Wunused-function")
+
+Q_DECLARE_FLAGS(Options, Option)
+Q_DECLARE_OPERATORS_FOR_FLAGS(Options)
+
+QT_WARNING_POP
+
 struct TestResult
 {
     struct Icon
@@ -31,6 +48,7 @@ struct TestResult
         QUrl        url      = {};
         QString     urlId    = {};
         QStringList topics   = {};
+        Options     options  = {};
     };
 
     QVersionNumber version = {};
@@ -95,6 +113,11 @@ private slots:
       <width>384</width>
       <height>256</height>
       <url id="url-a">/icons/test.png</url>
+      <option1/>
+      <option2>false</option2>
+      <option3>yes</option3>
+      <option4>OFF</option4>
+      <option5>1</option5>
     </icon>
 
     <icon id="icon-b">
@@ -103,6 +126,10 @@ private slots:
       <height>512</height>
       <url id="url-b">/icons/test.webp</url>
       <topic>test</topic>
+      <option2>true</option2>
+      <option3>no</option3>
+      <option4>on</option4>
+      <option5>0</option5>
     </icon>
   </icons>
 
@@ -114,8 +141,15 @@ private slots:
 
         const auto validResult = TestResult {
             QVersionNumber{1, 2}, {
-                {"icon-a"_L1, "image/png"_L1,  {384, 256}, "/icons/test.png"_url,  "url-a"_L1},
-                {"icon-b"_L1, "image/webp"_L1, {768, 512}, "/icons/test.webp"_url, "url-b"_L1, {"test"_L1}},
+                {
+                    "icon-a"_L1, "image/png"_L1,  {384, 256},
+                    "/icons/test.png"_url,  "url-a"_L1,
+                    {}, Option::A | Option::C | Option::E
+                }, {
+                    "icon-b"_L1, "image/webp"_L1, {768, 512},
+                    "/icons/test.webp"_url, "url-b"_L1,
+                    {"test"_L1}, Option::B | Option::D
+                },
             }, {
                 "https://ecosia.org/"_url,
                 "https://mission-lifeline.de/en/"_url,
@@ -175,6 +209,11 @@ private slots:
                     {u"url/@id",    parser.assign<&TestResult::Icon::urlId>(result)},
                     {u"url",        parser.assign<&TestResult::Icon::url>(result)},
                     {u"topic",      parser.append<&TestResult::Icon::topics>(result)},
+                    {u"option1",    parser.assign<&TestResult::Icon::options, Option::A>(result)},
+                    {u"option2",    parser.assign<&TestResult::Icon::options, Option::B>(result)},
+                    {u"option3",    parser.assign<&TestResult::Icon::options, Option::C>(result)},
+                    {u"option4",    parser.assign<&TestResult::Icon::options, Option::D>(result)},
+                    {u"option5",    parser.assign<&TestResult::Icon::options, Option::E>(result)},
                 }
             }
         };
@@ -204,6 +243,8 @@ private slots:
                      std::make_pair(i, expectedResult.icons[i].urlId));
             QCOMPARE(std::make_pair(i,         result.icons[i].topics),
                      std::make_pair(i, expectedResult.icons[i].topics));
+            QCOMPARE(std::make_pair(i,         result.icons[i].options),
+                     std::make_pair(i, expectedResult.icons[i].options));
         }
     }
 

@@ -179,6 +179,19 @@ QString ParserBase::stateName(const QMetaEnum &metaEnum, int value)
     return "%1%2(%4)"_L1.arg(prefix, typeName, QString::number(value));
 }
 
+void ParserBase::parseFlag(QStringView text, const std::function<void(bool)> &store)
+{
+    const auto &trimmedText = text.trimmed();
+
+    if (trimmedText.isEmpty()) {
+        store(true);
+    } else if (const auto parsed = qnc::parse<bool>(trimmedText)) {
+        store(parsed.value());
+    } else {
+        m_xml->raiseError(tr("Unexpected value for flag: %1").arg(trimmedText));
+    }
+}
+
 QString ParserBase::AbstractContext::currentStateName() const
 {
     if (Q_UNLIKELY(isEmpty()))
