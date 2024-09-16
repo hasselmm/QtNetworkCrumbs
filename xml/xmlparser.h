@@ -29,6 +29,18 @@ Object &currentObject(Context &context) { return context; }
 
 namespace detail {
 
+struct MemberTraits
+{
+    template <typename T, class Context>
+    static constexpr T fieldType(T (Context::*field));
+
+    template <typename T, class Context>
+    static constexpr T argumentType(void (Context::*member)(T));
+
+    template <typename T, class Context>
+    static constexpr Context objectType(T (Context::*field));
+};
+
 template <typename T>
 using RequireEnum = std::enable_if_t<std::is_enum_v<T>, bool>;
 
@@ -38,6 +50,15 @@ using RequireField = std::enable_if_t<std::is_member_pointer_v<decltype(field)>,
 template <auto member>
 using RequireMemberFunction = std::enable_if_t<std::is_member_function_pointer_v<decltype(member)>, bool>;
 
+template <auto field, RequireField<field> = true>
+using ValueType = decltype(MemberTraits::fieldType(field));
+
+template <auto field, RequireField<field> = true>
+using ObjectType = decltype(MemberTraits::objectType(field));
+
+template <auto member, RequireMemberFunction<member> = true>
+using ArgumentType = decltype(MemberTraits::argumentType(member));
+
 } // namespace detail
 
 class ParserBase : public QObject
@@ -45,37 +66,62 @@ class ParserBase : public QObject
     Q_OBJECT
 
 public:
+    using Processing = std::function<void()>;
+
     explicit ParserBase(QXmlStreamReader *reader, QObject *parent = nullptr)
         : QObject{parent}
         , m_xml{reader}
     {}
 
+    template <typename T>
+    Processing run(const std::function<void(T)> &callback)
+    {
+        return [this, callback] {
+            read<T>(callback);
+        };
+    }
+
+    template <auto field, class Context,
+              detail::RequireField<field> = true>
+    Processing setField(Context &context)
+    {
+        return [this, &context] {
+            using Value  = detail::ValueType <field>;
+            using Object = detail::ObjectType<field>;
+
+            read<Value>([&context](Value value) {
+                (currentObject<Object>(context).*field) = std::move(value);
+            });
+        };
+    }
+
+    template <auto field, auto setter, class Context,
+              detail::RequireMemberFunction<setter> = true,
+              detail::RequireField<field> = true>
+    Processing setField(Context &context)
+    {
+        return [this, &context] {
+            using Value  = detail::ArgumentType<setter>;
+            using Object = detail::ObjectType  <field>;
+
+            read<Value>([&context](Value value) {
+                (currentObject<Object>(context).*field.*setter)(std::move(value));
+            });
+        };
+    }
+
+    template <auto field, VersionSegment segment, class Context,
+              detail::RequireField<field> = true>
+    Processing setField(Context &context)
+    {
+        return run<int>([&context](int number) {
+            updateVersion(context.*field, segment, number);
+        });
+    };
+
 protected:
     template <typename T>
     void read(const std::function<void(T)> &store);
-
-    template <typename T, class Object, class Context>
-    void readField(Context &context, T (Object::*field))
-    {
-        read<T>([&context, field](T value) {
-            (currentObject<Object>(context).*field) = std::move(value);
-        });
-    }
-
-    template <typename T, typename Field, class Object, class Context>
-    void readField(Context &context, Field (Object::*field), void (Field::*setter)(T))
-    {
-        read<T>([&context, field, setter](T value) {
-            auto &fieldInstance = currentObject<Object>(context).*field;
-            (fieldInstance.*setter)(std::move(value));
-        });
-    }
-
-    template <typename T, class Object, class Context>
-    static void extendList(Context &context, QList<T> (Object::*list))
-    {
-        (currentObject<Object>(context).*list).append(T{});
-    }
 
     static QString stateName(const QMetaEnum &metaEnum, int value);
 
@@ -112,7 +158,6 @@ public:
     static_assert(std::is_enum_v<StateEnum>);
 
     using State          = StateEnum;
-    using Processing     = std::function<void()>;
     using Transition     = std::function<State()>;
     using ParseStep      = std::variant<std::monostate, Transition, Processing>;
     using ElementTable   = QHash<QStringView, ParseStep>;
@@ -133,46 +178,14 @@ public:
     static Transition transition(Context &context)
     {
         return [&context] {
-            extendList(context, list);
+            using Value  = typename detail::ValueType <list>::value_type;
+            using Object = typename detail::ObjectType<list>;
+
+            (currentObject<Object>(context).*list).append(Value{});
+
             return nextState;
         };
     }
-
-    template <typename T>
-    Processing run(const std::function<void(T)> &callback)
-    {
-        return [this, callback] {
-            read<T>(callback);
-        };
-    }
-
-    template <auto field, class Context,
-              detail::RequireField<field> = true>
-    Processing setField(Context &context)
-    {
-        return [this, &context] {
-            readField(context, field);
-        };
-    }
-
-    template <auto field, auto setter, class Context,
-              detail::RequireMemberFunction<setter> = true,
-              detail::RequireField<field> = true>
-    Processing setField(Context &context)
-    {
-        return [this, &context] {
-            readField(context, field, setter);
-        };
-    }
-
-    template <auto field, VersionSegment segment, class Context,
-              detail::RequireField<field> = true>
-    Processing setField(Context &context)
-    {
-        return run<int>([&context](int number) {
-            updateVersion(context.*field, segment, number);
-        });
-    };
 
     [[nodiscard]] bool parse(const QLoggingCategory &category, State initialState, const StateTable &parsers)
     {
