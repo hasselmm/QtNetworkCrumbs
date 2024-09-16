@@ -27,6 +27,19 @@ void updateVersion(QVersionNumber &version, VersionSegment segment, int number);
 template <class Object, class Context>
 Object &currentObject(Context &context) { return context; }
 
+namespace detail {
+
+template <typename T>
+using RequireEnum = std::enable_if_t<std::is_enum_v<T>, bool>;
+
+template <auto field>
+using RequireField = std::enable_if_t<std::is_member_pointer_v<decltype(field)>, bool>;
+
+template <auto member>
+using RequireMemberFunction = std::enable_if_t<std::is_member_function_pointer_v<decltype(member)>, bool>;
+
+} // namespace detail
+
 class ParserBase : public QObject
 {
     Q_OBJECT
@@ -134,7 +147,7 @@ public:
     }
 
     template <auto field, class Context,
-              typename = std::enable_if_t<std::is_member_pointer_v<decltype(field)>>>
+              detail::RequireField<field> = true>
     Processing setField(Context &context)
     {
         return [this, &context] {
@@ -143,8 +156,8 @@ public:
     }
 
     template <auto field, auto setter, class Context,
-              typename = std::enable_if_t<std::is_member_pointer_v<decltype(field)>>,
-              typename = std::enable_if_t<std::is_member_function_pointer_v<decltype(setter)>>>
+              detail::RequireMemberFunction<setter> = true,
+              detail::RequireField<field> = true>
     Processing setField(Context &context)
     {
         return [this, &context] {
@@ -153,7 +166,7 @@ public:
     }
 
     template <auto field, VersionSegment segment, class Context,
-              typename = std::enable_if_t<std::is_member_pointer_v<decltype(field)>>>
+              detail::RequireField<field> = true>
     Processing setField(Context &context)
     {
         return run<int>([&context](int number) {
@@ -225,7 +238,7 @@ private:
 
 #if QT_VERSION_MAJOR < 6
 
-template<typename Enum, typename = std::enable_if_t<std::is_enum_v<Enum>>>
+template<typename Enum, detail::RequireEnum<Enum> = true>
 constexpr uint qHash(Enum value) noexcept
 {
     using underlying_type = std::underlying_type_t<Enum>;
