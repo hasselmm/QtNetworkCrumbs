@@ -80,6 +80,48 @@ void reportIgnoredAttribute(const QLoggingCategory &category, const QXmlStreamRe
             static_cast<int>(reader->columnNumber()));
 }
 
+template <typename T>
+std::optional<T> convert(QStringView text)
+{
+    return qnc::parse<T>(text);
+}
+
+template <>
+std::optional<QString> convert(QStringView text)
+{
+    return text.toString();
+}
+
+template <>
+std::optional<QStringView> convert(QStringView text)
+{
+    return text;
+}
+
+template <>
+std::optional<QUrl> convert(QStringView text)
+{
+    return QUrl{text.toString()};
+}
+
+template <typename T>
+QString parseErrorMessage()
+{
+    return ParserBase::tr("Invalid number: %1");
+}
+
+template <>
+QString parseErrorMessage<QString>()
+{
+    return ParserBase::tr("Invalid text: %1");
+}
+
+template <>
+QString parseErrorMessage<QUrl>()
+{
+    return ParserBase::tr("Invalid URL: %1");
+}
+
 } // namespace
 
 void updateVersion(QVersionNumber &version, VersionSegment segment, int number)
@@ -94,26 +136,32 @@ void updateVersion(QVersionNumber &version, VersionSegment segment, int number)
     version = QVersionNumber{segments};
 }
 
-template <>
-void ParserBase::parseValue(QStringView text, const std::function<void(int)> &store)
+template <typename T>
+void ParserBase::parseValue(QStringView text, const std::function<void(T)> &store)
 {
-    if (const auto &value = qnc::parse<int>(text))
+    if (const auto &value = convert<T>(text))
         store(*value);
     else
-        m_xml->raiseError(tr("Invalid number: %1").arg(text));
+        m_xml->raiseError(parseErrorMessage<T>().arg(text));
 }
 
-template <>
-void ParserBase::parseValue(QStringView text, const std::function<void(QString)> &store)
-{
-    store(text.toString());
-}
-
-template <>
-void ParserBase::parseValue(QStringView text, const std::function<void(QUrl)> &store)
-{
-    store(QUrl{text.toString()});
-}
+template void ParserBase::parseValue(QStringView, const std::function<void(bool)> &);
+template void ParserBase::parseValue(QStringView, const std::function<void(qint8)> &);
+template void ParserBase::parseValue(QStringView, const std::function<void(quint8)> &);
+template void ParserBase::parseValue(QStringView, const std::function<void(short)> &);
+template void ParserBase::parseValue(QStringView, const std::function<void(ushort)> &);
+template void ParserBase::parseValue(QStringView, const std::function<void(int)> &);
+template void ParserBase::parseValue(QStringView, const std::function<void(uint)> &);
+template void ParserBase::parseValue(QStringView, const std::function<void(long)> &);
+template void ParserBase::parseValue(QStringView, const std::function<void(ulong)> &);
+template void ParserBase::parseValue(QStringView, const std::function<void(qlonglong)> &);
+template void ParserBase::parseValue(QStringView, const std::function<void(qulonglong)> &);
+template void ParserBase::parseValue(QStringView, const std::function<void(float)> &);
+template void ParserBase::parseValue(QStringView, const std::function<void(double)> &);
+template void ParserBase::parseValue(QStringView, const std::function<void(long double)> &);
+template void ParserBase::parseValue(QStringView, const std::function<void(QString)> &);
+template void ParserBase::parseValue(QStringView, const std::function<void(QStringView)> &);
+template void ParserBase::parseValue(QStringView, const std::function<void(QUrl)> &);
 
 QString ParserBase::stateName(const QMetaEnum &metaEnum, int value)
 {

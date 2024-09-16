@@ -4,6 +4,7 @@
 
 // QtNetworkCrumbs headers
 #include "qncliterals.h"
+#include "qnctestsupport.h"
 #include "xmlparser.h"
 
 // Qt headers
@@ -14,7 +15,7 @@
 namespace qnc::xml::tests {
 namespace {
 
-Q_LOGGING_CATEGORY(lcTest, "qnc.xml.tests")
+Q_LOGGING_CATEGORY(lcTest, "qnc.xml.tests", QtInfoMsg)
 
 #if QT_VERSION_MAJOR < 6
 using xml::qHash;
@@ -35,10 +36,13 @@ struct TestResult
     QList<Icon>    icons   = {};
 };
 
+using ConversionTest = std::function<void()>;
+
 } // namespace
 } // namespace qnc::xml::tests
 
 Q_DECLARE_METATYPE(QXmlStreamReader::Error)
+Q_DECLARE_METATYPE(qnc::xml::tests::ConversionTest)
 Q_DECLARE_METATYPE(qnc::xml::tests::TestResult)
 
 template <>
@@ -62,6 +66,13 @@ public:
     };
 
     Q_ENUM(State)
+
+    enum class MinimalState {
+        Document,
+        Root,
+    };
+
+    Q_ENUM(MinimalState)
 
     using QObject::QObject;
 
@@ -180,6 +191,110 @@ private slots:
             QCOMPARE(std::make_pair(i,         result.icons[i].urlId),
                      std::make_pair(i, expectedResult.icons[i].urlId));
         }
+    }
+
+    void testConversions_data()
+    {
+        QTest::addColumn<ConversionTest>("testFunction");
+
+        QTest::newRow("bool:invalid")       << makeConversionTest<bool>       (u"nonsense", {});
+        QTest::newRow("qint8:invalid")      << makeConversionTest<qint8>      (u"nonsense", {});
+        QTest::newRow("quint8:invalid")     << makeConversionTest<quint8>     (u"nonsense", {});
+        QTest::newRow("short:invalid")      << makeConversionTest<short>      (u"nonsense", {});
+        QTest::newRow("ushort:invalid")     << makeConversionTest<ushort>     (u"nonsense", {});
+        QTest::newRow("int:invalid")        << makeConversionTest<int>        (u"nonsense", {});
+        QTest::newRow("uint:invalid")       << makeConversionTest<uint>       (u"nonsense", {});
+        QTest::newRow("long:invalid")       << makeConversionTest<long>       (u"nonsense", {});
+        QTest::newRow("ulong:invalid")      << makeConversionTest<ulong>      (u"nonsense", {});
+        QTest::newRow("qlonglong:invalid")  << makeConversionTest<qlonglong>  (u"nonsense", {});
+        QTest::newRow("qulonglong:invalid") << makeConversionTest<qulonglong> (u"nonsense", {});
+        QTest::newRow("longdouble:invalid") << makeConversionTest<long double>(u"nonsense", {});
+        QTest::newRow("double:invalid")     << makeConversionTest<double>     (u"nonsense", {});
+        QTest::newRow("float:invalid")      << makeConversionTest<float>      (u"nonsense", {});
+
+        QTest::newRow("bool:valid")        << makeConversionTest<bool>              (u"true", true);
+        QTest::newRow("qint8:valid")       << makeConversionTest<qint8>               (u"-8", -8);
+        QTest::newRow("quint8:valid")      << makeConversionTest<quint8>               (u"8",  8);
+        QTest::newRow("short:valid")       << makeConversionTest<short>            (u"-2048", -2048);
+        QTest::newRow("ushort:valid")      << makeConversionTest<ushort>            (u"2048",  2048);
+        QTest::newRow("int:valid")         << makeConversionTest<int>            (u"-524288", -524288);
+        QTest::newRow("uint:valid")        << makeConversionTest<uint>            (u"524288",  524288);
+        QTest::newRow("long:valid")        << makeConversionTest<long>        (u"-134217728", -134217728);
+        QTest::newRow("ulong:valid")       << makeConversionTest<ulong>        (u"134217728",  134217728);
+        QTest::newRow("qlonglong:valid")   << makeConversionTest<qlonglong>(u"-549755813888", -549755813888);
+        QTest::newRow("qulonglong:valid")  << makeConversionTest<qulonglong>(u"549755813888",  549755813888);
+        QTest::newRow("float:valid")       << makeConversionTest<float>             (u"1.23",  1.23);
+        QTest::newRow("double:valid")      << makeConversionTest<double>            (u"4.56",  4.56);
+        QTest::newRow("longdouble:valid")  << makeConversionTest<long double>       (u"7.89",  7.89);
+        QTest::newRow("QString:valid")     << makeConversionTest<QString>    (u"Hello world", u"Hello world"_s);
+        QTest::newRow("QStringView:valid") << makeConversionTest<QStringView>(u"Hello world", u"Hello world");
+        QTest::newRow("QUrl:valid")        << makeConversionTest<QUrl>       (u"hello:world",  "hello:world"_url);
+    }
+
+    void testConversions()
+    {
+        const QFETCH(ConversionTest, testFunction);
+        testFunction();
+    }
+
+private:
+    template <typename T>
+    static ConversionTest makeConversionTest(QStringView text, const std::optional<T> &expectedValue)
+    {
+        return [expectedValue, text] {
+            struct TestType
+            {
+                T value = {};
+
+                void setValue(T newValue) { value = std::move(newValue); }
+            };
+
+            struct TestResult
+            {
+                T        viaFieldAssign  = {};
+                TestType viaMethodAssign = {};
+            };
+
+            const auto xml = "<root><field>%1</field><method>%1</method></root>"_L1.arg(text);
+
+            auto reader = QXmlStreamReader{xml.toUtf8()};
+            auto parser = Parser<MinimalState>{&reader};
+            auto result = TestResult{};
+
+            const Parser<MinimalState>::StateTable states = {
+                {
+                    MinimalState::Document, {
+                        {u"root", parser.transition<MinimalState::Root>()}
+                    }
+                }, {
+                    MinimalState::Root, {
+                        {u"field",  parser.assign<&TestResult::viaFieldAssign>(result)},
+                        {u"method", parser.assign<&TestResult::viaMethodAssign, &TestType::setValue>(result)},
+                    }
+                }
+            };
+
+            if (!expectedValue.has_value()) {
+                auto pattern =
+                        R"(Error at line 1, column \d+: Invalid number: %1)"_L1.
+                        arg(QRegularExpression::escape(text));
+
+                QTest::ignoreMessage(QtWarningMsg, QRegularExpression{pattern});
+            }
+
+            const auto succeeded = parser.parse(lcTest(), MinimalState::Document, states);
+
+            QCOMPARE(succeeded, expectedValue.has_value());
+
+            if (succeeded) {
+                QCOMPARE(result.viaMethodAssign.value, expectedValue.value());
+                QCOMPARE(reader.error(), QXmlStreamReader::NoError);
+            } else {
+                QCOMPARE(result.viaFieldAssign, T{});
+                QCOMPARE(result.viaMethodAssign.value, T{});
+                QCOMPARE(reader.error(), QXmlStreamReader::CustomError);
+            }
+        };
     }
 };
 
