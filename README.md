@@ -80,6 +80,9 @@ The declarative XML parser provided here easily turns such XML
       <url>/icons/test.webp</url>
     </icon>
   </icons>
+
+  <url>https://ecosia.org/</url>
+  <url>https://mission-lifeline.de/en/</url>
 </root>
 ```
 
@@ -98,6 +101,7 @@ struct TestResult
 
     QVersionNumber version = {};
     QList<Icon>    icons   = {};
+    QList<QUrl>    urls    = {};
 };
 ```
 
@@ -114,6 +118,7 @@ const auto states = StateTable {
         State::Root, {
             {u"version",    transition<State::Version>()},
             {u"icons",      transition<State::IconList>()},
+            {u"url",        append<&TestResult::urls>(result)},
         }
     }, {
         State::Version, {

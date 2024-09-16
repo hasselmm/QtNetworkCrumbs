@@ -25,15 +25,17 @@ struct TestResult
 {
     struct Icon
     {
-        QString id       = {};
-        QString mimeType = {};
-        QSize   size     = {};
-        QUrl    url      = {};
-        QString urlId    = {};
+        QString     id       = {};
+        QString     mimeType = {};
+        QSize       size     = {};
+        QUrl        url      = {};
+        QString     urlId    = {};
+        QStringList topics   = {};
     };
 
     QVersionNumber version = {};
     QList<Icon>    icons   = {};
+    QList<QUrl>    urls    = {};
 };
 
 using ConversionTest = std::function<void()>;
@@ -100,8 +102,12 @@ private slots:
       <width>768</width>
       <height>512</height>
       <url id="url-b">/icons/test.webp</url>
+      <topic>test</topic>
     </icon>
   </icons>
+
+  <url>https://ecosia.org/</url>
+  <url>https://mission-lifeline.de/en/</url>
 </root>)"_ba.trimmed();
 
         const auto namespaceXml = QByteArray{validXml}.replace("<root>", R"(<root xmlns="urn:test">)");
@@ -109,7 +115,10 @@ private slots:
         const auto validResult = TestResult {
             QVersionNumber{1, 2}, {
                 {"icon-a"_L1, "image/png"_L1,  {384, 256}, "/icons/test.png"_url,  "url-a"_L1},
-                {"icon-b"_L1, "image/webp"_L1, {768, 512}, "/icons/test.webp"_url, "url-b"_L1},
+                {"icon-b"_L1, "image/webp"_L1, {768, 512}, "/icons/test.webp"_url, "url-b"_L1, {"test"_L1}},
+            }, {
+                "https://ecosia.org/"_url,
+                "https://mission-lifeline.de/en/"_url,
             }
         };
 
@@ -146,6 +155,7 @@ private slots:
                 State::Root, {
                     {u"version",    parser.transition<State::Version>()},
                     {u"icons",      parser.transition<State::IconList>()},
+                    {u"url",        parser.append<&TestResult::urls>(result)},
                 }
             }, {
                 State::Version, {
@@ -164,6 +174,7 @@ private slots:
                     {u"height",     parser.assign<&TestResult::Icon::size, &QSize::setHeight>(result)},
                     {u"url/@id",    parser.assign<&TestResult::Icon::urlId>(result)},
                     {u"url",        parser.assign<&TestResult::Icon::url>(result)},
+                    {u"topic",      parser.append<&TestResult::Icon::topics>(result)},
                 }
             }
         };
@@ -178,6 +189,7 @@ private slots:
         QCOMPARE(reader.error(),            expectedError);
         QCOMPARE(result.version,            expectedResult.version);
         QCOMPARE(result.icons.count(),      expectedResult.icons.count());
+        QCOMPARE(result.urls,               expectedResult.urls);
 
         for (auto i = 0; i < expectedResult.icons.count(); ++i) {
             QCOMPARE(std::make_pair(i,         result.icons[i].id),
@@ -190,6 +202,8 @@ private slots:
                      std::make_pair(i, expectedResult.icons[i].url));
             QCOMPARE(std::make_pair(i,         result.icons[i].urlId),
                      std::make_pair(i, expectedResult.icons[i].urlId));
+            QCOMPARE(std::make_pair(i,         result.icons[i].topics),
+                     std::make_pair(i, expectedResult.icons[i].topics));
         }
     }
 

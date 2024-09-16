@@ -96,6 +96,19 @@ public:
         };
     }
 
+    template <auto list, class Context,
+              detail::RequireField<list> = true>
+    GenericParser append(Context &context)
+    {
+        return [this, &context](const QXmlStreamAttribute *attribute) {
+            using Value = typename detail::ValueType<list>::value_type;
+
+            read<Value>(attribute, [&context](Value value) {
+                emplaceBack<list>(context, std::move(value));
+            });
+        };
+    }
+
     template <auto field, auto setter, class Context,
               detail::RequireMemberFunction<setter> = true,
               detail::RequireField<field> = true>
@@ -121,6 +134,18 @@ public:
     };
 
 protected:
+    template <auto list, class Context,
+              detail::RequireField<list> = true>
+    static void emplaceBack(Context &context, typename detail::ValueType<list>::value_type &&value)
+    {
+        using Object = typename detail::ObjectType<list>;
+#if QT_VERSION_MAJOR >= 6
+        (currentObject<Object>(context).*list).emplaceBack(std::move(value));
+#else // QT_VERSION_MAJOR < 6
+        (currentObject<Object>(context).*list).append(std::move(value));
+#endif // QT_VERSION_MAJOR < 6
+    }
+
     static QString stateName(const QMetaEnum &metaEnum, int value);
 
 protected:
@@ -195,11 +220,7 @@ public:
     static Transition transition(Context &context)
     {
         return [&context] {
-            using Value  = typename detail::ValueType <list>::value_type;
-            using Object = typename detail::ObjectType<list>;
-
-            (currentObject<Object>(context).*list).append(Value{});
-
+            emplaceBack<list>(context, {});
             return nextState;
         };
     }
