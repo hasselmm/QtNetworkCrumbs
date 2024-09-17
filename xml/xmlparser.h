@@ -161,8 +161,12 @@ public:
         });
     };
 
-    [[nodiscard]] bool parse(const QLoggingCategory &category, State initialState,
-                             const NamespaceTable &parsers)
+    [[nodiscard]] bool parse(const QLoggingCategory &category, State initialState, const StateTable &parsers)
+    {
+        return parse(category, initialState, {{QStringView{}, parsers}});
+    }
+
+    [[nodiscard]] bool parse(const QLoggingCategory &category, State initialState, const NamespaceTable &parsers)
     {
         auto context = Context{initialState, parsers};
         return ParserBase::parse(category, context);
