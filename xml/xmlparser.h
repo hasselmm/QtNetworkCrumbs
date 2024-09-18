@@ -101,7 +101,7 @@ protected:
 
     bool parse(const QLoggingCategory &category, AbstractContext &context);
 
-protected:
+private:
     QXmlStreamReader *const m_xml;
 };
 
