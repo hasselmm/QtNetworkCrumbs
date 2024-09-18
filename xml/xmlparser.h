@@ -223,10 +223,6 @@ private:
     };
 };
 
-template <> void ParserBase::read(const std::function<void(int)>     &store);
-template <> void ParserBase::read(const std::function<void(QString)> &store);
-template <> void ParserBase::read(const std::function<void(QUrl)>    &store);
-
 #if QT_VERSION_MAJOR < 6
 
 template<typename Enum, typename = std::enable_if_t<std::is_enum_v<Enum>>>
