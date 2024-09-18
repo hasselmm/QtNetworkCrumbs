@@ -56,6 +56,17 @@ void reportTransition(const QLoggingCategory &category,
     }
 }
 
+void reportIgnoredElement(const QLoggingCategory &category, const QXmlStreamReader *reader)
+{
+    qCDebug(category,
+            "Ignoring <%ls> element (with %ls=<%ls>) at line %d, column %d",
+            qUtf16Printable(reader->qualifiedName().toString()),
+            qUtf16Printable(reader->prefix().toString()),
+            qUtf16Printable(reader->namespaceUri().toString()),
+            static_cast<int>(reader->lineNumber()),
+            static_cast<int>(reader->columnNumber()));
+}
+
 } // namespace
 
 void updateVersion(QVersionNumber &version, VersionSegment segment, int number)
@@ -117,44 +128,35 @@ QString ParserBase::AbstractContext::currentStateName() const
     return stateName(currentState());
 }
 
+std::optional<int> ParserBase::AbstractContext::parseElement(QStringView elementName) const
+{
+    const auto currentStep = findStep(elementName);
+
+    if (const auto nextState = std::get_if<int>(&currentStep)) {
+        return *nextState;
+    } else if (const auto parser = std::get_if<Processing>(&currentStep)) {
+        std::invoke(*parser);
+        return currentState();
+    } else {
+        return {};
+    }
+}
+
 bool ParserBase::parse(const QLoggingCategory &category, AbstractContext &context)
 {
+    qCDebug(category, "Starting ==> %ls",
+            qUtf16Printable(context.currentStateName()));
+
     while (!m_xml->atEnd()
            && !m_xml->hasError()
            && !context.isEmpty()) {
-        const auto initialState = context.currentState();
-
         switch (m_xml->readNext()) {
         case QXmlStreamReader::StartElement:
-            if (!context.selectNamespace(m_xml->namespaceUri())) {
-                qCDebug(category, "Ignoring <%ls> element (with %ls=<%ls>) at line %d, column %d",
-                        qUtf16Printable(m_xml->qualifiedName().toString()),
-                        qUtf16Printable(m_xml->prefix().toString()),
-                        qUtf16Printable(m_xml->namespaceUri().toString()),
-                        static_cast<int>(m_xml->lineNumber()),
-                        static_cast<int>(m_xml->columnNumber()));
-
-                m_xml->skipCurrentElement();
-            } else if (const auto &nextState = context.processElement(m_xml->name()); !nextState) {
-                m_xml->raiseError(tr("Unexpected <%1> element in %2 state").
-                                  arg(m_xml->name(), context.currentStateName()));
-            } else if (nextState != context.currentState()) {
-                reportTransition(category, Entering, m_xml,
-                                 context.stateName(initialState),
-                                 context.stateName(nextState.value()));
-
-                context.enterState(nextState.value());
-            }
-
+            parseStartElement(category, context);
             break;
 
         case QXmlStreamReader::EndElement:
-            context.leaveState();
-
-            reportTransition(category, Leaving, m_xml,
-                             context.stateName(context.currentState()),
-                             context.stateName(initialState));
-
+            parseEndElement(category, context);
             break;
 
         case QXmlStreamReader::NoToken:
@@ -177,6 +179,40 @@ bool ParserBase::parse(const QLoggingCategory &category, AbstractContext &contex
     }
 
     return true;
+}
+
+void ParserBase::parseStartElement(const QLoggingCategory &category, AbstractContext &context)
+{
+    if (!context.selectNamespace(m_xml->namespaceUri())) {
+        reportIgnoredElement(category, m_xml);
+        m_xml->skipCurrentElement();
+    } else if (const auto &nextState = context.parseElement(m_xml->name()); !nextState) {
+        m_xml->raiseError(tr("Unexpected <%1> element in %2 state").
+                          arg(m_xml->name(), context.currentStateName()));
+    } else if (nextState != context.currentState()) {
+        reportTransition(category, Entering, m_xml,
+                         context.stateName(context.currentState()),
+                         context.stateName(nextState.value()));
+
+        context.enterState(nextState.value());
+    }
+}
+
+void ParserBase::parseEndElement(const QLoggingCategory &category, AbstractContext &context)
+{
+    const auto initialState = context.currentState();
+
+    context.leaveState();
+
+    if (context.isEmpty()) {
+        qCDebug(category, "%ls ==> leaving",
+                qUtf16Printable(context.stateName(initialState)));
+    } else {
+        reportTransition(category, Leaving, m_xml,
+                         context.stateName(context.currentState()),
+                         context.stateName(initialState));
+    }
+
 }
 
 } // namespace qnc::xml
