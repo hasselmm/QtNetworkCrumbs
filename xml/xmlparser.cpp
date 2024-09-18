@@ -125,44 +125,13 @@ bool ParserBase::parse(const QLoggingCategory &category, AbstractContext &contex
     while (!m_xml->atEnd()
            && !m_xml->hasError()
            && !context.isEmpty()) {
-        const auto currentState = context.currentState();
-
         switch (m_xml->readNext()) {
         case QXmlStreamReader::StartElement:
-            if (!context.selectNamespace(m_xml->namespaceUri())) {
-                qCDebug(category, "Ignoring <%ls> element (with %ls=<%ls>) at line %d, column %d",
-                        qUtf16Printable(m_xml->qualifiedName().toString()),
-                        qUtf16Printable(m_xml->prefix().toString()),
-                        qUtf16Printable(m_xml->namespaceUri().toString()),
-                        static_cast<int>(m_xml->lineNumber()),
-                        static_cast<int>(m_xml->columnNumber()));
-
-                m_xml->skipCurrentElement();
-            } else if (const auto &nextState = context.processElement(m_xml->name()); !nextState) {
-                m_xml->raiseError(tr("Unexpected <%1> element in %2 state").
-                                  arg(m_xml->name(), context.currentStateName()));
-            } else if (nextState != context.currentState()) {
-                reportTransition(category, Entering, m_xml,
-                                 context.stateName(currentState),
-                                 context.stateName(nextState.value()));
-
-                context.enterState(nextState.value());
-            }
-
+            parseStartElement(category, context);
             break;
 
         case QXmlStreamReader::EndElement:
-            context.leaveState();
-
-            if (context.isEmpty()) {
-                qCDebug(category, "%ls ==> leaving",
-                        qUtf16Printable(context.stateName(currentState)));
-            } else {
-                reportTransition(category, Leaving, m_xml,
-                                 context.stateName(context.currentState()),
-                                 context.stateName(currentState));
-            }
-
+            parseEndElement(category, context);
             break;
 
         case QXmlStreamReader::NoToken:
@@ -185,6 +154,46 @@ bool ParserBase::parse(const QLoggingCategory &category, AbstractContext &contex
     }
 
     return true;
+}
+
+void ParserBase::parseStartElement(const QLoggingCategory &category, AbstractContext &context)
+{
+    if (!context.selectNamespace(m_xml->namespaceUri())) {
+        qCDebug(category, "Ignoring <%ls> element (with %ls=<%ls>) at line %d, column %d",
+                qUtf16Printable(m_xml->qualifiedName().toString()),
+                qUtf16Printable(m_xml->prefix().toString()),
+                qUtf16Printable(m_xml->namespaceUri().toString()),
+                static_cast<int>(m_xml->lineNumber()),
+                static_cast<int>(m_xml->columnNumber()));
+
+        m_xml->skipCurrentElement();
+    } else if (const auto &nextState = context.processElement(m_xml->name()); !nextState) {
+        m_xml->raiseError(tr("Unexpected <%1> element in %2 state").
+                          arg(m_xml->name(), context.currentStateName()));
+    } else if (nextState != context.currentState()) {
+        reportTransition(category, Entering, m_xml,
+                         context.stateName(context.currentState()),
+                         context.stateName(nextState.value()));
+
+        context.enterState(nextState.value());
+    }
+}
+
+void ParserBase::parseEndElement(const QLoggingCategory &category, AbstractContext &context)
+{
+    const auto initialState = context.currentState();
+
+    context.leaveState();
+
+    if (context.isEmpty()) {
+        qCDebug(category, "%ls ==> leaving",
+                qUtf16Printable(context.stateName(initialState)));
+    } else {
+        reportTransition(category, Leaving, m_xml,
+                         context.stateName(context.currentState()),
+                         context.stateName(initialState));
+    }
+
 }
 
 } // namespace qnc::xml

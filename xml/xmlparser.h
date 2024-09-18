@@ -148,6 +148,9 @@ protected:
     bool parse(const QLoggingCategory &category, AbstractContext &context);
 
 private:
+    void parseStartElement(const QLoggingCategory &category, AbstractContext &context);
+    void parseEndElement(const QLoggingCategory &category, AbstractContext &context);
+
     QXmlStreamReader *const m_xml;
 };
 
