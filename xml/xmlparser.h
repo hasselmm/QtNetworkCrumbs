@@ -129,6 +129,8 @@ protected:
     class AbstractContext
     {
     public:
+        using GenericStep = std::variant<std::monostate, int, Processing>;
+
         AbstractContext(int initialState) { enterState(initialState); }
 
         bool isEmpty() const { return m_stack.isEmpty(); }
@@ -138,8 +140,10 @@ protected:
         void leaveState() { m_stack.pop(); }
 
         virtual bool selectNamespace(QStringView namespaceUri) = 0;
-        virtual std::optional<int> processElement(QStringView elementName) = 0;
+        virtual GenericStep findStep(QStringView elementName) const = 0;
         virtual QString stateName(int state) const = 0;
+
+        std::optional<int> parseElement(QStringView elementName) const;
 
     private:
         QStack<int> m_stack = {};
@@ -223,20 +227,18 @@ private:
             return m_currentNamespace != m_parsers.cend();
         }
 
-        std::optional<int> processElement(QStringView elementName) override
+        GenericStep findStep(QStringView elementName) const override
         {
+            if (Q_UNLIKELY(m_currentNamespace == m_parsers.cend()))
+                return {};
+
             const auto state        = static_cast<State>(AbstractContext::currentState());
             const auto &parseSteps  = m_currentNamespace->value(state);
-            const auto &currentStep = parseSteps.value(elementName);
+            const auto &currentStep = parseSteps.value(std::move(elementName));
 
-            if (const auto transition = std::get_if<Transition>(&currentStep)) {
-                return static_cast<int>(std::invoke(*transition));
-            } else if (const auto processing = std::get_if<Processing>(&currentStep)) {
-                std::invoke(*processing);
-                return currentState();
-            } else {
-                return {};
-            }
+            return std::visit([](auto &&value) {
+                return makeStep(std::forward<decltype(value)>(value));
+            }, currentStep);
         }
 
         QString stateName(int state) const override
@@ -245,6 +247,17 @@ private:
         }
 
     private:
+        template <typename T>
+        static GenericStep makeStep(T &&value)
+        {
+            return {std::forward<T>(value)};
+        }
+
+        static GenericStep makeStep(const Transition &transition)
+        {
+            return static_cast<int>(transition());
+        }
+
         using NamespaceIterator = typename NamespaceTable::ConstIterator;
 
         NamespaceTable    m_parsers;

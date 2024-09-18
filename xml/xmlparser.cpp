@@ -128,6 +128,20 @@ QString ParserBase::AbstractContext::currentStateName() const
     return stateName(currentState());
 }
 
+std::optional<int> ParserBase::AbstractContext::parseElement(QStringView elementName) const
+{
+    const auto currentStep = findStep(elementName);
+
+    if (const auto nextState = std::get_if<int>(&currentStep)) {
+        return *nextState;
+    } else if (const auto parser = std::get_if<Processing>(&currentStep)) {
+        std::invoke(*parser);
+        return currentState();
+    } else {
+        return {};
+    }
+}
+
 bool ParserBase::parse(const QLoggingCategory &category, AbstractContext &context)
 {
     qCDebug(category, "Starting ==> %ls",
@@ -172,7 +186,7 @@ void ParserBase::parseStartElement(const QLoggingCategory &category, AbstractCon
     if (!context.selectNamespace(m_xml->namespaceUri())) {
         reportIgnoredElement(category, m_xml);
         m_xml->skipCurrentElement();
-    } else if (const auto &nextState = context.processElement(m_xml->name()); !nextState) {
+    } else if (const auto &nextState = context.parseElement(m_xml->name()); !nextState) {
         m_xml->raiseError(tr("Unexpected <%1> element in %2 state").
                           arg(m_xml->name(), context.currentStateName()));
     } else if (nextState != context.currentState()) {
