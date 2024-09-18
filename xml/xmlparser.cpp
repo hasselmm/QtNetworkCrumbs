@@ -56,6 +56,17 @@ void reportTransition(const QLoggingCategory &category,
     }
 }
 
+void reportIgnoredElement(const QLoggingCategory &category, const QXmlStreamReader *reader)
+{
+    qCDebug(category,
+            "Ignoring <%ls> element (with %ls=<%ls>) at line %d, column %d",
+            qUtf16Printable(reader->qualifiedName().toString()),
+            qUtf16Printable(reader->prefix().toString()),
+            qUtf16Printable(reader->namespaceUri().toString()),
+            static_cast<int>(reader->lineNumber()),
+            static_cast<int>(reader->columnNumber()));
+}
+
 } // namespace
 
 void updateVersion(QVersionNumber &version, VersionSegment segment, int number)
@@ -159,13 +170,7 @@ bool ParserBase::parse(const QLoggingCategory &category, AbstractContext &contex
 void ParserBase::parseStartElement(const QLoggingCategory &category, AbstractContext &context)
 {
     if (!context.selectNamespace(m_xml->namespaceUri())) {
-        qCDebug(category, "Ignoring <%ls> element (with %ls=<%ls>) at line %d, column %d",
-                qUtf16Printable(m_xml->qualifiedName().toString()),
-                qUtf16Printable(m_xml->prefix().toString()),
-                qUtf16Printable(m_xml->namespaceUri().toString()),
-                static_cast<int>(m_xml->lineNumber()),
-                static_cast<int>(m_xml->columnNumber()));
-
+        reportIgnoredElement(category, m_xml);
         m_xml->skipCurrentElement();
     } else if (const auto &nextState = context.processElement(m_xml->name()); !nextState) {
         m_xml->raiseError(tr("Unexpected <%1> element in %2 state").
