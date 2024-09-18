@@ -93,6 +93,7 @@ struct TestResult
         QString mimeType = {};
         QSize   size     = {};
         QUrl    url      = {};
+        QString relation = {};
     };
 
     QVersionNumber version = {};
@@ -128,6 +129,7 @@ const auto states = StateTable {
             {u"mimetype",   assign<&TestResult::Icon::mimeType>(result)},
             {u"width",      assign<&TestResult::Icon::size, &QSize::setWidth>(result)},
             {u"height",     assign<&TestResult::Icon::size, &QSize::setHeight>(result)},
+            {u"url/@rel",   assign<&TestResult::Icon::relation>(result)},
             {u"url",        assign<&TestResult::Icon::url>(result)},
         }
     }

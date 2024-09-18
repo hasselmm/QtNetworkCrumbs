@@ -66,7 +66,8 @@ class ParserBase : public QObject
     Q_OBJECT
 
 public:
-    using Processing = std::function<void()>;
+    using ElementParser = std::function<void()>;
+    using GenericParser = std::function<void(const QXmlStreamAttribute *)>;
 
     explicit ParserBase(QXmlStreamReader *reader, QObject *parent = nullptr)
         : QObject{parent}
@@ -74,22 +75,22 @@ public:
     {}
 
     template <typename T>
-    Processing invoke(const std::function<void(T)> &callback)
+    GenericParser invoke(const std::function<void(T)> &callback)
     {
-        return [this, callback] {
-            read<T>(callback);
+        return [this, callback](const QXmlStreamAttribute *attribute) {
+            read<T>(attribute, callback);
         };
     }
 
     template <auto field, class Context,
               detail::RequireField<field> = true>
-    Processing assign(Context &context)
+    GenericParser assign(Context &context)
     {
-        return [this, &context] {
+        return [this, &context](const QXmlStreamAttribute *attribute) {
             using Value  = detail::ValueType <field>;
             using Object = detail::ObjectType<field>;
 
-            read<Value>([&context](Value value) {
+            read<Value>(attribute, [&context](Value value) {
                 (currentObject<Object>(context).*field) = std::move(value);
             });
         };
@@ -98,13 +99,13 @@ public:
     template <auto field, auto setter, class Context,
               detail::RequireMemberFunction<setter> = true,
               detail::RequireField<field> = true>
-    Processing assign(Context &context)
+    GenericParser assign(Context &context)
     {
-        return [this, &context] {
+        return [this, &context](const QXmlStreamAttribute *attribute) {
             using Value  = detail::ArgumentType<setter>;
             using Object = detail::ObjectType  <field>;
 
-            read<Value>([&context](Value value) {
+            read<Value>(attribute, [&context](Value value) {
                 (currentObject<Object>(context).*field.*setter)(std::move(value));
             });
         };
@@ -112,7 +113,7 @@ public:
 
     template <auto field, VersionSegment segment, class Context,
               detail::RequireField<field> = true>
-    Processing assign(Context &context)
+    GenericParser assign(Context &context)
     {
         return invoke<int>([&context](int number) {
             updateVersion(context.*field, segment, number);
@@ -120,16 +121,13 @@ public:
     };
 
 protected:
-    template <typename T>
-    void read(const std::function<void(T)> &store);
-
     static QString stateName(const QMetaEnum &metaEnum, int value);
 
 protected:
     class AbstractContext
     {
     public:
-        using GenericStep = std::variant<std::monostate, int, Processing>;
+        using GenericStep = std::variant<std::monostate, int, ElementParser, GenericParser>;
 
         AbstractContext(int initialState) { enterState(initialState); }
 
@@ -144,6 +142,7 @@ protected:
         virtual QString stateName(int state) const = 0;
 
         std::optional<int> parseElement(QStringView elementName) const;
+        bool parseAttribute(QStringView elementName, const QXmlStreamAttribute &attribute) const;
 
     private:
         QStack<int> m_stack = {};
@@ -154,6 +153,17 @@ protected:
 private:
     void parseStartElement(const QLoggingCategory &category, AbstractContext &context);
     void parseEndElement(const QLoggingCategory &category, AbstractContext &context);
+
+    template <typename T>
+    void parseValue(QStringView text, const std::function<void(T)> &store);
+
+    template <typename T>
+    void read(const QXmlStreamAttribute *attribute, const std::function<void(T)> &store)
+    {
+        parseValue(readValue(attribute), store);
+    }
+
+    QString readValue(const QXmlStreamAttribute *attribute);
 
     QXmlStreamReader *const m_xml;
 };
@@ -166,7 +176,7 @@ public:
 
     using State          = StateEnum;
     using Transition     = std::function<State()>;
-    using ParseStep      = std::variant<std::monostate, Transition, Processing>;
+    using ParseStep      = std::variant<std::monostate, Transition, ElementParser, GenericParser>;
     using ElementTable   = QHash<QStringView, ParseStep>;
     using StateTable     = QHash<State, ElementTable>;
     using NamespaceTable = QHash<QStringView, StateTable>;
