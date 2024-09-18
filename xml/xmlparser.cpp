@@ -136,6 +136,24 @@ void updateVersion(QVersionNumber &version, VersionSegment segment, int number)
     version = QVersionNumber{segments};
 }
 
+void ParserBase::parseEnum(QStringView text, KeyToIntFunction keyToInt,
+                           const std::function<void (int)> &store)
+{
+    if (const auto &value = keyToInt(text); Q_LIKELY(value))
+        store(*value);
+    else
+        m_xml->raiseError(tr("Invalid value for enumeration: %1").arg(text));
+}
+
+void ParserBase::parseEnum(QStringView text, KeyToIntFunction keyToInt,
+                           const std::function<void (int, QStringView)> &store)
+{
+    if (const auto &value = keyToInt(text); Q_LIKELY(value))
+        store(*value, QStringView{});
+    else
+        store(0, std::move(text));
+}
+
 template <typename T>
 void ParserBase::parseValue(QStringView text, const std::function<void(T)> &store)
 {

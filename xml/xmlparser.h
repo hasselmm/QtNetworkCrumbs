@@ -13,6 +13,7 @@
 #include <QXmlStreamReader>
 
 // STL headers
+#include <array>
 #include <optional>
 #include <variant>
 
@@ -26,6 +27,18 @@ void updateVersion(QVersionNumber &version, VersionSegment segment, int number);
 
 template <class Object, class Context>
 Object &currentObject(Context &context) { return context; }
+
+template <typename T>
+constexpr std::size_t keyCount = 0;
+
+template <typename T, std::size_t N = keyCount<T>>
+using KeyValueMap = std::array<std::pair<T, QStringView>, N>;
+
+template <typename T>
+constexpr KeyValueMap<T> keyValueMap() { return {}; }
+
+template<typename T>
+using OpportunisticEnum = std::variant<std::monostate, T, QString>;
 
 namespace detail {
 
@@ -61,6 +74,57 @@ using ObjectType = decltype(MemberTraits::objectType(field));
 
 template <auto member, RequireMemberFunction<member> = true>
 using ArgumentType = decltype(MemberTraits::argumentType(member));
+
+template<typename T> struct is_opportunistic_enum : std::false_type {};
+
+template<typename T>
+struct is_opportunistic_enum<OpportunisticEnum<T>> : std::true_type {};
+
+template<typename T>
+constexpr bool is_opportunistic_enum_v = is_opportunistic_enum<T>::value;
+
+template<typename T>
+constexpr const char *qt_getEnumName(T) { return nullptr; }
+
+template<typename T>
+std::optional<T> keyToValue(QStringView key)
+{
+    if constexpr (!keyValueMap<T>().empty()) {
+        static constexpr auto map = keyValueMap<T>();
+
+        static_assert(!std::get<QStringView>(map.front()).isEmpty(),
+                      "Unsupported enum type: keyValueMap() has invalid keys");
+
+        const auto it = std::find_if(map.cbegin(), map.cend(), [key](const auto &pair) {
+            return std::get<QStringView>(pair) == key;
+        });
+
+        if (Q_LIKELY(it != map.cend()))
+            return std::get<T>(*it);
+    } else if constexpr (qt_getEnumName(T{}) != nullptr) {
+        static const auto &metaEnum = QMetaEnum::fromType<T>();
+
+        auto isValid = false;
+        const auto value = metaEnum.keyToValue(key.toLatin1().constData(), &isValid);
+
+        if (Q_LIKELY(isValid))
+            return static_cast<T>(value);
+    } else {
+        static_assert(static_cast<int>(T{}) && false,
+                      "Unsupported enum type: Neither keyValueMap() nor Q_ENUM() found");
+    }
+
+    return {};
+}
+
+template<typename T>
+std::optional<int> keyToInt(QStringView key)
+{
+    if (const auto &value = keyToValue<T>(std::move(key)); Q_LIKELY(value))
+        return static_cast<int>(*value);
+
+    return {};
+}
 
 } // namespace detail
 
@@ -197,6 +261,30 @@ private:
     void parseStartElement(const QLoggingCategory &category, AbstractContext &context);
     void parseEndElement(const QLoggingCategory &category, AbstractContext &context);
 
+    using KeyToIntFunction = std::optional<int> (*)(QStringView);
+
+    void parseEnum(QStringView text, KeyToIntFunction keyToInt, const std::function<void(int)> &store);
+    void parseEnum(QStringView text, KeyToIntFunction keyToInt, const std::function<void(int, QStringView)> &store);
+
+    template <typename T>
+    void parseEnum(QStringView text, const std::function<void(T)> &store)
+    {
+        parseEnum(text, &detail::keyToInt<T>, [store](int value) {
+            store(static_cast<T>(value));
+        });
+    }
+
+    template <typename T>
+    void parseEnum(QStringView text, const std::function<void(OpportunisticEnum<T>)> &store)
+    {
+        parseEnum(text, &detail::keyToInt<T>, [store](int value, QStringView text) {
+            if (Q_LIKELY(text.isEmpty()))
+                store(static_cast<T>(value));
+            else
+                store(text.toString());
+        });
+    }
+
     void parseFlag(QStringView text, const std::function<void(bool)> &store);
 
     template <typename T>
@@ -205,7 +293,13 @@ private:
     template <typename T>
     void read(const QXmlStreamAttribute *attribute, const std::function<void(T)> &store)
     {
-        parseValue(readValue(attribute), store);
+        const auto &text = readValue(attribute);
+
+        if constexpr (std::is_enum_v<T> || detail::is_opportunistic_enum_v<T>) {
+            parseEnum(text, store);
+        } else {
+            parseValue(text, store);
+        }
     }
 
     QString readValue(const QXmlStreamAttribute *attribute);

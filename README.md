@@ -66,14 +66,14 @@ The declarative XML parser provided here easily turns such XML
   </version>
 
   <icons>
-    <icon>
+    <icon type="default">
       <mimetype>image/png</mimetype>
       <width>384</width>
       <height>256</height>
       <url>/icons/test.png</url>
     </icon>
 
-    <icon>
+    <icon type="banner">
       <mimetype>image/webp</mimetype>
       <width>768</width>
       <height>512</height>
@@ -93,6 +93,9 @@ struct TestResult
 {
     struct Icon
     {
+        enum Type { Default, Banner };
+
+        Type    type     = {};
         QString mimeType = {};
         QSize   size     = {};
         QUrl    url      = {};
@@ -131,6 +134,7 @@ const auto states = StateTable {
         }
     }, {
         State::Icon, {
+            {u"@type",      assign<&TestResult::Icon::type>(result)},
             {u"mimetype",   assign<&TestResult::Icon::mimeType>(result)},
             {u"width",      assign<&TestResult::Icon::size, &QSize::setWidth>(result)},
             {u"height",     assign<&TestResult::Icon::size, &QSize::setHeight>(result)},

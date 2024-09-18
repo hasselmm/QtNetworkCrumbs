@@ -13,6 +13,9 @@
 #include <QVersionNumber>
 
 namespace qnc::xml::tests {
+
+Q_NAMESPACE
+
 namespace {
 
 Q_LOGGING_CATEGORY(lcTest, "qnc.xml.tests", QtInfoMsg)
@@ -38,17 +41,34 @@ Q_DECLARE_OPERATORS_FOR_FLAGS(Options)
 
 QT_WARNING_POP
 
+enum Direction
+{
+    Input  = 1,
+    Output = 2,
+};
+
+enum class KnownTypes
+{
+    KnownType,
+};
+
+Q_ENUM_NS(KnownTypes)
+
+using DataType = OpportunisticEnum<KnownTypes>;
+
 struct TestResult
 {
     struct Icon
     {
-        QString     id       = {};
-        QString     mimeType = {};
-        QSize       size     = {};
-        QUrl        url      = {};
-        QString     urlId    = {};
-        QStringList topics   = {};
-        Options     options  = {};
+        QString     id        = {};
+        QString     mimeType  = {};
+        QSize       size      = {};
+        QUrl        url       = {};
+        QString     urlId     = {};
+        QStringList topics    = {};
+        Options     options   = {};
+        Direction   direction = {};
+        DataType    type      = {};
     };
 
     QVersionNumber version = {};
@@ -65,11 +85,28 @@ Q_DECLARE_METATYPE(QXmlStreamReader::Error)
 Q_DECLARE_METATYPE(qnc::xml::tests::ConversionTest)
 Q_DECLARE_METATYPE(qnc::xml::tests::TestResult)
 
-template <>
-qnc::xml::tests::TestResult::Icon &
-qnc::xml::currentObject(tests::TestResult &result) { return result.icons.last(); }
+namespace qnc::xml {
 
-namespace qnc::xml::tests {
+template <>
+tests::TestResult::Icon &
+currentObject(tests::TestResult &result) { return result.icons.last(); }
+
+template <>
+constexpr std::size_t keyCount<tests::Direction> = 2;
+
+template <>
+constexpr KeyValueMap<tests::Direction>
+keyValueMap<tests::Direction>()
+{
+    return {
+        {
+            {tests::Direction::Input,  u"in"},
+            {tests::Direction::Output, u"out"},
+        }
+    };
+}
+
+namespace tests {
 namespace {
 
 class ParserTest : public QObject
@@ -118,6 +155,8 @@ private slots:
       <option3>yes</option3>
       <option4>OFF</option4>
       <option5>1</option5>
+      <direction>in</direction>
+      <type>KnownType</type>
     </icon>
 
     <icon id="icon-b">
@@ -130,6 +169,8 @@ private slots:
       <option3>no</option3>
       <option4>on</option4>
       <option5>0</option5>
+      <direction>out</direction>
+      <type>UnknownType</type>
     </icon>
   </icons>
 
@@ -144,11 +185,13 @@ private slots:
                 {
                     "icon-a"_L1, "image/png"_L1,  {384, 256},
                     "/icons/test.png"_url,  "url-a"_L1,
-                    {}, Option::A | Option::C | Option::E
+                    {}, Option::A | Option::C | Option::E,
+                    Input, KnownTypes::KnownType,
                 }, {
                     "icon-b"_L1, "image/webp"_L1, {768, 512},
                     "/icons/test.webp"_url, "url-b"_L1,
-                    {"test"_L1}, Option::B | Option::D
+                    {"test"_L1}, Option::B | Option::D,
+                    Output, "UnknownType"_L1,
                 },
             }, {
                 "https://ecosia.org/"_url,
@@ -214,6 +257,8 @@ private slots:
                     {u"option3",    parser.assign<&TestResult::Icon::options, Option::C>(result)},
                     {u"option4",    parser.assign<&TestResult::Icon::options, Option::D>(result)},
                     {u"option5",    parser.assign<&TestResult::Icon::options, Option::E>(result)},
+                    {u"direction",  parser.assign<&TestResult::Icon::direction>(result)},
+                    {u"type",       parser.assign<&TestResult::Icon::type>(result)},
                 }
             }
         };
@@ -245,6 +290,10 @@ private slots:
                      std::make_pair(i, expectedResult.icons[i].topics));
             QCOMPARE(std::make_pair(i,         result.icons[i].options),
                      std::make_pair(i, expectedResult.icons[i].options));
+            QCOMPARE(std::make_pair(i,         result.icons[i].direction),
+                     std::make_pair(i, expectedResult.icons[i].direction));
+            QCOMPARE(std::make_pair(i,         result.icons[i].type),
+                     std::make_pair(i, expectedResult.icons[i].type));
         }
     }
 
@@ -354,7 +403,8 @@ private:
 };
 
 } // namespace
-} // namespace qnc::xml::tests
+} // namespace tests
+} // namespace qnc::xml
 
 QTEST_GUILESS_MAIN(qnc::xml::tests::ParserTest)
 
