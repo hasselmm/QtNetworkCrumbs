@@ -12,6 +12,15 @@ if (CMAKE_CXX_COMPILER_ID MATCHES GNU|Clang)
         -Werror=switch -Werror=uninitialized -Werror=unused)
 endif()
 
+if (NOT CMAKE_CXX_COMPILER_LAUNCHER)
+    find_program(COMPILER_CACHE_EXECUTABLE sccache ccache)
+
+    if (COMPILER_CACHE_EXECUTABLE)
+        message(STATUS "Using compiler cache: ${COMPILER_CACHE_EXECUTABLE}")
+        set(CMAKE_CXX_COMPILER_LAUNCHER "${COMPILER_CACHE_EXECUTABLE}")
+    endif()
+endif()
+
 set(QNC_COMPILE_DEFINITIONS
     -DQT_DISABLE_DEPRECATED_BEFORE=0x050f00
     -DQT_NO_CAST_FROM_ASCII=1
