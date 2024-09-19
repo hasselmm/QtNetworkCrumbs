@@ -1,76 +1,169 @@
 /* QtNetworkCrumbs - Some networking toys for Qt
- * Copyright (C) 2023 Mathias Hasselmann
+ * Copyright (C) 2019-2024 Mathias Hasselmann
  */
 
+// QtNetworkCrumbs headers
+#include "qncliterals.h"
 #include "qncparse.h"
+#include "qnctestsupport.h"
 
+// Qt headers
 #include <QTest>
 
-Q_DECLARE_METATYPE(std::optional<short>)
-Q_DECLARE_METATYPE(std::optional<ushort>)
-Q_DECLARE_METATYPE(std::optional<int>)
-Q_DECLARE_METATYPE(std::optional<uint>)
-Q_DECLARE_METATYPE(std::optional<long>)
-Q_DECLARE_METATYPE(std::optional<ulong>)
-Q_DECLARE_METATYPE(std::optional<qlonglong>)
-Q_DECLARE_METATYPE(std::optional<qulonglong>)
-Q_DECLARE_METATYPE(std::optional<float>)
-Q_DECLARE_METATYPE(std::optional<double>)
+// STL headers
+#include <cmath>
+
+Q_DECLARE_METATYPE(std::function<void()>)
 
 namespace qnc::core::tests {
 namespace {
 
-struct NumberTypeInfo
-{
-    QVariant (* parse)        (QStringView) = nullptr;
-    QVariant (* parseWithBase)(QStringView, int base) = nullptr;
-    bool     (* hasValue)     (const QVariant &boxedOptional) = nullptr;
-    QVariant (* value)        (const QVariant &boxedOptional) = nullptr;
+const auto s_initialized = qnc::tests::initialize();
 
-    bool hasSign = false;
-    bool isFloat = false;
-};
+template <typename T> constexpr bool hasNegativeNumbers = std::is_signed_v<T> || std::is_same_v<T, bool>;
+template <typename T> constexpr bool hasCustomBase      = std::is_integral_v<T> && !std::is_same_v<T, bool>;
+
+template <typename T> constexpr QStringView maximumText;
+template <>           constexpr QStringView maximumText      <qint8> = u"127";
+template <>           constexpr QStringView maximumText     <qint16> = u"32767";
+template <>           constexpr QStringView maximumText     <qint32> = u"2147483647";
+template <>           constexpr QStringView maximumText     <qint64> = u"9223372036854775807";
+template <>           constexpr QStringView maximumText     <quint8> = u"255";
+template <>           constexpr QStringView maximumText    <quint16> = u"65535";
+template <>           constexpr QStringView maximumText    <quint32> = u"4294967295";
+template <>           constexpr QStringView maximumText    <quint64> = u"18446744073709551615";
+template <>           constexpr QStringView maximumText       <bool> = u"true";
+template <>           constexpr QStringView maximumText      <float> = u"3.40282e+38";
+template <>           constexpr QStringView maximumText     <double> = u"1.7976931348623e+308";
+
+template <typename T> constexpr QStringView minimumText;
+template <>           constexpr QStringView minimumText      <qint8> = u"-128";
+template <>           constexpr QStringView minimumText     <qint16> = u"-32768";
+template <>           constexpr QStringView minimumText     <qint32> = u"-2147483648";
+template <>           constexpr QStringView minimumText     <qint64> = u"-9223372036854775808";
+template <>           constexpr QStringView minimumText     <quint8> = u"0";
+template <>           constexpr QStringView minimumText    <quint16> = u"0";
+template <>           constexpr QStringView minimumText    <quint32> = u"0";
+template <>           constexpr QStringView minimumText    <quint64> = u"0";
+template <>           constexpr QStringView minimumText       <bool> = u"false";
+template <>           constexpr QStringView minimumText      <float> = u"-3.40282e+38";
+template <>           constexpr QStringView minimumText     <double> = u"-1.7976931348623e+308";
+
+template <typename T, typename A, typename B>
+constexpr QStringView select(QStringView a, QStringView b)
+{
+    if constexpr (sizeof(T) == sizeof(A)) {
+        return a;
+    } else {
+        static_assert(sizeof(T) == sizeof(B));
+        return b;
+    }
+}
+
+template <typename T, typename A, typename B>
+constexpr QStringView selectMinimumText() { return select<T, A, B>(minimumText<A>, minimumText<B>); }
+template <typename T, typename A, typename B>
+constexpr QStringView selectMaximumText() { return select<T, A, B>(maximumText<A>, maximumText<B>); }
+
+template <> constexpr QStringView maximumText<long>  = selectMaximumText<long,  qint32,  qint64>();
+template <> constexpr QStringView minimumText<long>  = selectMinimumText<long,  qint32,  qint64>();
+template <> constexpr QStringView maximumText<ulong> = selectMaximumText<ulong, quint32, quint64>();
+template <> constexpr QStringView minimumText<ulong> = selectMinimumText<ulong, quint32, quint64>();
+
+template <typename T, typename A>
+constexpr QStringView selectMinimumText(QStringView b) { return select<T, A, T>(minimumText<A>, std::move(b)); }
+template <typename T, typename A>
+constexpr QStringView selectMaximumText(QStringView b) { return select<T, A, T>(maximumText<A>, std::move(b)); }
+
+template <> constexpr QStringView maximumText<long double> = selectMaximumText<long double, double>(u"1.1897314953572317649e+4932");
+template <> constexpr QStringView minimumText<long double> = selectMinimumText<long double, double>(u"-1.1897314953572317649e+4932");
+
+QString incrementLastChar(QStringView text)
+{
+    if (text == u"0")
+        return u"-1"_s;
+
+    auto result     = text.toString();
+    const auto back = result.end() - 1;
+
+    if (!back->isDigit())
+        return {};
+
+    *back = QChar{back->unicode() + 1};
+
+    return result;
+}
 
 template <typename T>
-NumberTypeInfo makeNumberTypeInfo()
+std::function<void()> makeTestParseNumbers()
 {
-    static constexpr auto unbox = [](const QVariant &boxedOptional) {
-        return qvariant_cast<std::optional<T>>(boxedOptional);
+    return [] {
+        QVERIFY(!maximumText<T>.isEmpty());
+        QVERIFY(!minimumText<T>.isEmpty());
+
+        auto aboveMaximumText = incrementLastChar(maximumText<T>); // max. numbers for all int types end with 7 or 5
+        auto belowMinimumText = incrementLastChar(minimumText<T>); // min. numbers or int types all are 0 or end with 8
+
+        const auto  invalidNumber = parse<T>(u"ABC");
+        const auto positiveNumber = parse<T>(u"+10");
+        const auto negativeNumber = parse<T>(u"-10");
+        const auto  maximumNumber = parse<T>(maximumText<T>);
+        const auto  minimumNumber = parse<T>(minimumText<T>);
+        const auto    aboveNumber = parse<T>(aboveMaximumText);
+        const auto    belowNumber = parse<T>(belowMinimumText);
+
+        QVERIFY (!invalidNumber.has_value());
+        QVERIFY (positiveNumber.has_value());
+        QVERIFY2( maximumNumber.has_value(), qPrintable(maximumText<T>.toString()));
+        QVERIFY2( minimumNumber.has_value(), qPrintable(minimumText<T>.toString()));
+        QVERIFY2(!  aboveNumber.has_value(), qPrintable(aboveMaximumText));
+        QVERIFY2(!  belowNumber.has_value(), qPrintable(belowMinimumText));
+
+        QCOMPARE(positiveNumber.value(), static_cast<T>(+10));
+
+        QCOMPARE( maximumNumber.value(), std::numeric_limits<T>::max());
+        QCOMPARE( minimumNumber.value(), std::numeric_limits<T>::lowest());
+
+        if constexpr (hasNegativeNumbers<T>) {
+            QVERIFY(negativeNumber.has_value());
+            QCOMPARE(negativeNumber.value(), static_cast<T>(-10));
+        } else {
+            QVERIFY(!negativeNumber.has_value());
+        }
+
+        if constexpr (hasCustomBase<T>) {
+            QCOMPARE(parse<T>(u"21",  8), 17);
+            QCOMPARE(parse<T>(u"21", 10), 21);
+            QCOMPARE(parse<T>(u"21", 16), 33);
+        }
+
+        if constexpr (std::is_floating_point_v<T>) {
+            const auto positiveFloat    = parse<T>(u"1.23");
+            const auto positiveInfinity = parse<T>(u"inf");
+            const auto negativeFloat    = parse<T>(u"-5e-3");
+            const auto negativeInfinity = parse<T>(u"-inf");
+            const auto nan              = parse<T>(u"nan");
+
+            QVERIFY (positiveFloat.has_value());
+            QCOMPARE(positiveFloat.value(), static_cast<T>(1.23));
+
+            QVERIFY (negativeFloat.has_value());
+            QCOMPARE(negativeFloat.value(), static_cast<T>(-5e-3));
+
+            QVERIFY(positiveInfinity.has_value());
+            QVERIFY(std::isinf(positiveInfinity.value()));
+
+            QVERIFY(negativeInfinity.has_value());
+            QVERIFY(std::isinf(negativeInfinity.value()));
+
+            QVERIFY(nan.has_value());
+            QVERIFY(std::isnan(nan.value()));
+        }
     };
-
-    auto info = NumberTypeInfo{};
-
-    info.hasSign = std::is_signed_v<T>;
-    info.isFloat = std::is_floating_point_v<T>;
-
-    info.parse = [](QStringView text) {
-        return QVariant::fromValue(parse<T>(text));
-    };
-
-    info.hasValue = [](const QVariant &boxedOptional) {
-        return unbox(boxedOptional).has_value();
-    };
-
-    info.value = [](const QVariant &boxedOptional) {
-        if (const auto optional = unbox(boxedOptional))
-            return QVariant::fromValue(optional.value());
-        else
-            return QVariant{};
-    };
-
-    if constexpr (std::is_integral_v<T>) {
-        info.parseWithBase = [](QStringView text, int base) {
-            return QVariant::fromValue(parse<T>(text, base));
-        };
-    }
-
-    return info;
-};
+}
 
 } // namespace
 } // namespace qnc::core::tests
-
-Q_DECLARE_METATYPE(qnc::core::tests::NumberTypeInfo)
 
 namespace qnc::core::tests {
 
@@ -84,39 +177,62 @@ public:
 private slots:
     void testParseNumbers_data()
     {
-        QTest::addColumn<NumberTypeInfo>("number");
+        QTest::addColumn<std::function<void()>>("testFunction");
 
-        QTest::newRow("short")      << makeNumberTypeInfo<short>();
-        QTest::newRow("ushort")     << makeNumberTypeInfo<ushort>();
-        QTest::newRow("int")        << makeNumberTypeInfo<int>();
-        QTest::newRow("uint")       << makeNumberTypeInfo<uint>();
-        QTest::newRow("long")       << makeNumberTypeInfo<long>();
-        QTest::newRow("ulong")      << makeNumberTypeInfo<ulong>();
-        QTest::newRow("qlonglong")  << makeNumberTypeInfo<qlonglong>();
-        QTest::newRow("qulonglong") << makeNumberTypeInfo<qulonglong>();
-        QTest::newRow("float")      << makeNumberTypeInfo<float>();
-        QTest::newRow("double")     << makeNumberTypeInfo<double>();
+        QTest::newRow("bool")       << makeTestParseNumbers<bool>();
+        QTest::newRow("qint8")      << makeTestParseNumbers<qint8>();
+        QTest::newRow("quint8")     << makeTestParseNumbers<quint8>();
+        QTest::newRow("short")      << makeTestParseNumbers<short>();
+        QTest::newRow("ushort")     << makeTestParseNumbers<ushort>();
+        QTest::newRow("int")        << makeTestParseNumbers<int>();
+        QTest::newRow("uint")       << makeTestParseNumbers<uint>();
+        QTest::newRow("long")       << makeTestParseNumbers<long>();
+        QTest::newRow("ulong")      << makeTestParseNumbers<ulong>();
+        QTest::newRow("qlonglong")  << makeTestParseNumbers<qlonglong>();
+        QTest::newRow("qulonglong") << makeTestParseNumbers<qulonglong>();
+        QTest::newRow("float")      << makeTestParseNumbers<float>();
+        QTest::newRow("double")     << makeTestParseNumbers<double>();
+        QTest::newRow("longdouble") << makeTestParseNumbers<long double>();
     }
 
     void testParseNumbers()
     {
-        const QFETCH(NumberTypeInfo, number);
+        const QFETCH(std::function<void()>, testFunction);
+        testFunction();
+    }
 
-        QCOMPARE(number.hasValue(number.parse(u"ABC")),          false);
-        QCOMPARE(number.hasValue(number.parse(u"+10")),           true);
-        QCOMPARE(number.hasValue(number.parse(u"-10")), number.hasSign);
+    void testParseBool_data()
+    {
+        QTest::addColumn<QString>("text");
+        QTest::addColumn<bool>("value");
 
-        QCOMPARE(number.value(number.parse(u"+10")), +10);
+        QTest::newRow("enabled")  << "Enabled"  << true;
+        QTest::newRow("true")     << "True"     << true;
+        QTest::newRow("yes")      << "Yes"      << true;
+        QTest::newRow("on")       << "On"       << true;
+        QTest::newRow("1")        << "1"        << true;
+        QTest::newRow("-1")       << "-1"       << true;
 
-        if (number.hasSign)
-            QCOMPARE(number.value(number.parse(u"-10")), -10);
-        if (number.parseWithBase)
-            QCOMPARE(number.value(number.parseWithBase(u"21", 16)), 33);
+        QTest::newRow("disabled") << "Disabled" << false;
+        QTest::newRow("false")    << "False"    << false;
+        QTest::newRow("no")       << "No"       << false;
+        QTest::newRow("off")      << "Off"      << false;
+        QTest::newRow("0")        << "0"        << false;
+    }
 
-        if (number.isFloat) {
-            QCOMPARE(number.value(number.parse(u"1.2")).toFloat(), 1.2f);
-            QCOMPARE(number.value(number.parse(u"-5e-3")).toFloat(), -5e-3f);
-        }
+    void testParseBool()
+    {
+        const QFETCH(QString, text);
+        const QFETCH(bool,   value);
+
+        QVERIFY(parse<bool>(text).has_value());
+        QCOMPARE(parse<bool>(text).value(), value);
+
+        QVERIFY(parse<bool>(text.toLower()).has_value());
+        QCOMPARE(parse<bool>(text.toLower()).value(), value);
+
+        QVERIFY(parse<bool>(text.toUpper()).has_value());
+        QCOMPARE(parse<bool>(text.toUpper()).value(), value);
     }
 };
 

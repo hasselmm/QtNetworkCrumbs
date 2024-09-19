@@ -74,7 +74,7 @@ constexpr auto operator ""_L1(const char *str, std::size_t len)
     return QLatin1String{str, static_cast<qsizetype>(len)};
 }
 
-#else // QT_VERSION < QT_VERSION_CHECK(6,4,0)
+#else // QT_VERSION < QT_VERSION_CHECK(6,0,0)
 
 constexpr auto operator ""_L1(const char ch)
 {
@@ -89,6 +89,11 @@ constexpr auto operator ""_L1(const char *str, std::size_t len)
 inline auto operator ""_ba(const char *str, std::size_t len)
 {
     return QByteArray{str, static_cast<compat::lentype>(len)};
+}
+
+inline auto operator ""_s(const char16_t *str, std::size_t len)
+{
+    return QString::fromUtf16(str, static_cast<compat::lentype>(len));
 }
 
 #endif // QT_VERSION < QT_VERSION_CHECK(6,4,0)
