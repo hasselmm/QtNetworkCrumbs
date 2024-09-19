@@ -5,35 +5,47 @@
 // QtNetworkCrumbs headers
 #include "qncliterals.h"
 #include "qncparse.h"
+#include "qnctestsupport.h"
 
 // Qt headers
 #include <QTest>
+
+// STL headers
+#include <cmath>
 
 Q_DECLARE_METATYPE(std::function<void()>)
 
 namespace qnc::core::tests {
 namespace {
 
+const auto s_initialized = qnc::tests::initialize();
+
 template <typename T> constexpr bool hasNegativeNumbers = std::is_signed_v<T> || std::is_same_v<T, bool>;
 template <typename T> constexpr bool hasCustomBase      = std::is_integral_v<T> && !std::is_same_v<T, bool>;
 
 template <typename T> constexpr QStringView maximumText;
+template <>           constexpr QStringView maximumText      <qint8> = u"127";
 template <>           constexpr QStringView maximumText     <qint16> = u"32767";
 template <>           constexpr QStringView maximumText     <qint32> = u"2147483647";
 template <>           constexpr QStringView maximumText     <qint64> = u"9223372036854775807";
+template <>           constexpr QStringView maximumText     <quint8> = u"255";
 template <>           constexpr QStringView maximumText    <quint16> = u"65535";
 template <>           constexpr QStringView maximumText    <quint32> = u"4294967295";
 template <>           constexpr QStringView maximumText    <quint64> = u"18446744073709551615";
+template <>           constexpr QStringView maximumText       <bool> = u"true";
 template <>           constexpr QStringView maximumText      <float> = u"3.40282e+38";
 template <>           constexpr QStringView maximumText     <double> = u"1.7976931348623e+308";
 
 template <typename T> constexpr QStringView minimumText;
+template <>           constexpr QStringView minimumText      <qint8> = u"-128";
 template <>           constexpr QStringView minimumText     <qint16> = u"-32768";
 template <>           constexpr QStringView minimumText     <qint32> = u"-2147483648";
 template <>           constexpr QStringView minimumText     <qint64> = u"-9223372036854775808";
+template <>           constexpr QStringView minimumText     <quint8> = u"0";
 template <>           constexpr QStringView minimumText    <quint16> = u"0";
 template <>           constexpr QStringView minimumText    <quint32> = u"0";
 template <>           constexpr QStringView minimumText    <quint64> = u"0";
+template <>           constexpr QStringView minimumText       <bool> = u"false";
 template <>           constexpr QStringView minimumText      <float> = u"-3.40282e+38";
 template <>           constexpr QStringView minimumText     <double> = u"-1.7976931348623e+308";
 
@@ -57,6 +69,14 @@ template <> constexpr QStringView maximumText<long>  = selectMaximumText<long,  
 template <> constexpr QStringView minimumText<long>  = selectMinimumText<long,  qint32,  qint64>();
 template <> constexpr QStringView maximumText<ulong> = selectMaximumText<ulong, quint32, quint64>();
 template <> constexpr QStringView minimumText<ulong> = selectMinimumText<ulong, quint32, quint64>();
+
+template <typename T, typename A>
+constexpr QStringView selectMinimumText(QStringView b) { return select<T, A, T>(minimumText<A>, std::move(b)); }
+template <typename T, typename A>
+constexpr QStringView selectMaximumText(QStringView b) { return select<T, A, T>(maximumText<A>, std::move(b)); }
+
+template <> constexpr QStringView maximumText<long double> = selectMaximumText<long double, double>(u"1.1897314953572317649e+4932");
+template <> constexpr QStringView minimumText<long double> = selectMinimumText<long double, double>(u"-1.1897314953572317649e+4932");
 
 QString incrementLastChar(QStringView text)
 {
@@ -159,6 +179,9 @@ private slots:
     {
         QTest::addColumn<std::function<void()>>("testFunction");
 
+        QTest::newRow("bool")       << makeTestParseNumbers<bool>();
+        QTest::newRow("qint8")      << makeTestParseNumbers<qint8>();
+        QTest::newRow("quint8")     << makeTestParseNumbers<quint8>();
         QTest::newRow("short")      << makeTestParseNumbers<short>();
         QTest::newRow("ushort")     << makeTestParseNumbers<ushort>();
         QTest::newRow("int")        << makeTestParseNumbers<int>();
@@ -169,12 +192,47 @@ private slots:
         QTest::newRow("qulonglong") << makeTestParseNumbers<qulonglong>();
         QTest::newRow("float")      << makeTestParseNumbers<float>();
         QTest::newRow("double")     << makeTestParseNumbers<double>();
+        QTest::newRow("longdouble") << makeTestParseNumbers<long double>();
     }
 
     void testParseNumbers()
     {
         const QFETCH(std::function<void()>, testFunction);
         testFunction();
+    }
+
+    void testParseBool_data()
+    {
+        QTest::addColumn<QString>("text");
+        QTest::addColumn<bool>("value");
+
+        QTest::newRow("enabled")  << "Enabled"  << true;
+        QTest::newRow("true")     << "True"     << true;
+        QTest::newRow("yes")      << "Yes"      << true;
+        QTest::newRow("on")       << "On"       << true;
+        QTest::newRow("1")        << "1"        << true;
+        QTest::newRow("-1")       << "-1"       << true;
+
+        QTest::newRow("disabled") << "Disabled" << false;
+        QTest::newRow("false")    << "False"    << false;
+        QTest::newRow("no")       << "No"       << false;
+        QTest::newRow("off")      << "Off"      << false;
+        QTest::newRow("0")        << "0"        << false;
+    }
+
+    void testParseBool()
+    {
+        const QFETCH(QString, text);
+        const QFETCH(bool,   value);
+
+        QVERIFY(parse<bool>(text).has_value());
+        QCOMPARE(parse<bool>(text).value(), value);
+
+        QVERIFY(parse<bool>(text.toLower()).has_value());
+        QCOMPARE(parse<bool>(text.toLower()).value(), value);
+
+        QVERIFY(parse<bool>(text.toUpper()).has_value());
+        QCOMPARE(parse<bool>(text.toUpper()).value(), value);
     }
 };
 
