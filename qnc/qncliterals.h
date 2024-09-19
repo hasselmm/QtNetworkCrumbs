@@ -74,7 +74,7 @@ constexpr auto operator ""_L1(const char *str, std::size_t len)
     return QLatin1String{str, static_cast<qsizetype>(len)};
 }
 
-#else // QT_VERSION < QT_VERSION_CHECK(6,4,0)
+#else // QT_VERSION < QT_VERSION_CHECK(6,0,0)
 
 constexpr auto operator ""_L1(const char ch)
 {
