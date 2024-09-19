@@ -1,76 +1,62 @@
 /* QtNetworkCrumbs - Some networking toys for Qt
- * Copyright (C) 2023 Mathias Hasselmann
+ * Copyright (C) 2019-2024 Mathias Hasselmann
  */
 
+// QtNetworkCrumbs headers
 #include "qncparse.h"
 
+// Qt headers
 #include <QTest>
 
-Q_DECLARE_METATYPE(std::optional<short>)
-Q_DECLARE_METATYPE(std::optional<ushort>)
-Q_DECLARE_METATYPE(std::optional<int>)
-Q_DECLARE_METATYPE(std::optional<uint>)
-Q_DECLARE_METATYPE(std::optional<long>)
-Q_DECLARE_METATYPE(std::optional<ulong>)
-Q_DECLARE_METATYPE(std::optional<qlonglong>)
-Q_DECLARE_METATYPE(std::optional<qulonglong>)
-Q_DECLARE_METATYPE(std::optional<float>)
-Q_DECLARE_METATYPE(std::optional<double>)
+Q_DECLARE_METATYPE(std::function<void()>)
 
 namespace qnc::core::tests {
 namespace {
 
-struct NumberTypeInfo
-{
-    QVariant (* parse)        (QStringView) = nullptr;
-    QVariant (* parseWithBase)(QStringView, int base) = nullptr;
-    bool     (* hasValue)     (const QVariant &boxedOptional) = nullptr;
-    QVariant (* value)        (const QVariant &boxedOptional) = nullptr;
-
-    bool hasSign = false;
-    bool isFloat = false;
-};
+template <typename T> constexpr bool hasNegativeNumbers = std::is_signed_v<T> || std::is_same_v<T, bool>;
+template <typename T> constexpr bool hasCustomBase      = std::is_integral_v<T> && !std::is_same_v<T, bool>;
 
 template <typename T>
-NumberTypeInfo makeNumberTypeInfo()
+std::function<void()> makeTestParseNumbers()
 {
-    static constexpr auto unbox = [](const QVariant &boxedOptional) {
-        return qvariant_cast<std::optional<T>>(boxedOptional);
+    return [] {
+        const auto  invalidNumber = parse<T>(u"ABC");
+        const auto positiveNumber = parse<T>(u"+10");
+        const auto negativeNumber = parse<T>(u"-10");
+
+        QVERIFY (!invalidNumber.has_value());
+        QVERIFY (positiveNumber.has_value());
+
+        QCOMPARE(positiveNumber.value(), static_cast<T>(+10));
+
+        if constexpr (hasNegativeNumbers<T>) {
+            QVERIFY(negativeNumber.has_value());
+            QCOMPARE(negativeNumber.value(), static_cast<T>(-10));
+        } else {
+            QVERIFY(!negativeNumber.has_value());
+        }
+
+        if constexpr (hasCustomBase<T>) {
+            QCOMPARE(parse<T>(u"21",  8), 17);
+            QCOMPARE(parse<T>(u"21", 10), 21);
+            QCOMPARE(parse<T>(u"21", 16), 33);
+        }
+
+        if constexpr (std::is_floating_point_v<T>) {
+            const auto positiveFloat    = parse<T>(u"1.23");
+            const auto negativeFloat    = parse<T>(u"-5e-3");
+
+            QVERIFY (positiveFloat.has_value());
+            QCOMPARE(positiveFloat.value(), static_cast<T>(1.23));
+
+            QVERIFY (negativeFloat.has_value());
+            QCOMPARE(negativeFloat.value(), static_cast<T>(-5e-3));
+        }
     };
-
-    auto info = NumberTypeInfo{};
-
-    info.hasSign = std::is_signed_v<T>;
-    info.isFloat = std::is_floating_point_v<T>;
-
-    info.parse = [](QStringView text) {
-        return QVariant::fromValue(parse<T>(text));
-    };
-
-    info.hasValue = [](const QVariant &boxedOptional) {
-        return unbox(boxedOptional).has_value();
-    };
-
-    info.value = [](const QVariant &boxedOptional) {
-        if (const auto optional = unbox(boxedOptional))
-            return QVariant::fromValue(optional.value());
-        else
-            return QVariant{};
-    };
-
-    if constexpr (std::is_integral_v<T>) {
-        info.parseWithBase = [](QStringView text, int base) {
-            return QVariant::fromValue(parse<T>(text, base));
-        };
-    }
-
-    return info;
-};
+}
 
 } // namespace
 } // namespace qnc::core::tests
-
-Q_DECLARE_METATYPE(qnc::core::tests::NumberTypeInfo)
 
 namespace qnc::core::tests {
 
@@ -84,39 +70,24 @@ public:
 private slots:
     void testParseNumbers_data()
     {
-        QTest::addColumn<NumberTypeInfo>("number");
+        QTest::addColumn<std::function<void()>>("testFunction");
 
-        QTest::newRow("short")      << makeNumberTypeInfo<short>();
-        QTest::newRow("ushort")     << makeNumberTypeInfo<ushort>();
-        QTest::newRow("int")        << makeNumberTypeInfo<int>();
-        QTest::newRow("uint")       << makeNumberTypeInfo<uint>();
-        QTest::newRow("long")       << makeNumberTypeInfo<long>();
-        QTest::newRow("ulong")      << makeNumberTypeInfo<ulong>();
-        QTest::newRow("qlonglong")  << makeNumberTypeInfo<qlonglong>();
-        QTest::newRow("qulonglong") << makeNumberTypeInfo<qulonglong>();
-        QTest::newRow("float")      << makeNumberTypeInfo<float>();
-        QTest::newRow("double")     << makeNumberTypeInfo<double>();
+        QTest::newRow("short")      << makeTestParseNumbers<short>();
+        QTest::newRow("ushort")     << makeTestParseNumbers<ushort>();
+        QTest::newRow("int")        << makeTestParseNumbers<int>();
+        QTest::newRow("uint")       << makeTestParseNumbers<uint>();
+        QTest::newRow("long")       << makeTestParseNumbers<long>();
+        QTest::newRow("ulong")      << makeTestParseNumbers<ulong>();
+        QTest::newRow("qlonglong")  << makeTestParseNumbers<qlonglong>();
+        QTest::newRow("qulonglong") << makeTestParseNumbers<qulonglong>();
+        QTest::newRow("float")      << makeTestParseNumbers<float>();
+        QTest::newRow("double")     << makeTestParseNumbers<double>();
     }
 
     void testParseNumbers()
     {
-        const QFETCH(NumberTypeInfo, number);
-
-        QCOMPARE(number.hasValue(number.parse(u"ABC")),          false);
-        QCOMPARE(number.hasValue(number.parse(u"+10")),           true);
-        QCOMPARE(number.hasValue(number.parse(u"-10")), number.hasSign);
-
-        QCOMPARE(number.value(number.parse(u"+10")), +10);
-
-        if (number.hasSign)
-            QCOMPARE(number.value(number.parse(u"-10")), -10);
-        if (number.parseWithBase)
-            QCOMPARE(number.value(number.parseWithBase(u"21", 16)), 33);
-
-        if (number.isFloat) {
-            QCOMPARE(number.value(number.parse(u"1.2")).toFloat(), 1.2f);
-            QCOMPARE(number.value(number.parse(u"-5e-3")).toFloat(), -5e-3f);
-        }
+        const QFETCH(std::function<void()>, testFunction);
+        testFunction();
     }
 };
 
