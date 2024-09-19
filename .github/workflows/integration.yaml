@@ -125,7 +125,7 @@ jobs:
                         || matrix.configuration.cmake-flags,
                     ' ')}}
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: cmake-qt${{matrix.qt-version}}-${{matrix.configuration.id}}
           path: |
@@ -142,7 +142,7 @@ jobs:
         run: |
           ctest -C Release --verbose
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         if: (matrix.configuration.target || 'desktop') == 'desktop'
         with:
           name: ctest-qt${{matrix.qt-version}}-${{matrix.configuration.id}}
