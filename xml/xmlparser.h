@@ -13,6 +13,7 @@
 #include <QXmlStreamReader>
 
 // STL headers
+#include <array>
 #include <optional>
 #include <variant>
 
@@ -26,6 +27,18 @@ void updateVersion(QVersionNumber &version, VersionSegment segment, int number);
 
 template <class Object, class Context>
 Object &currentObject(Context &context) { return context; }
+
+template <typename T>
+constexpr std::size_t keyCount = 0;
+
+template <typename T, std::size_t N = keyCount<T>>
+using KeyValueMap = std::array<std::pair<T, QStringView>, N>;
+
+template <typename T>
+constexpr KeyValueMap<T> keyValueMap() { return {}; }
+
+template<typename T>
+using OpportunisticEnum = std::variant<std::monostate, T, QString>;
 
 namespace detail {
 
@@ -54,10 +67,64 @@ template <auto field, RequireField<field> = true>
 using ValueType = decltype(MemberTraits::fieldType(field));
 
 template <auto field, RequireField<field> = true>
+using FlagType = typename ValueType<field>::enum_type;
+
+template <auto field, RequireField<field> = true>
 using ObjectType = decltype(MemberTraits::objectType(field));
 
 template <auto member, RequireMemberFunction<member> = true>
 using ArgumentType = decltype(MemberTraits::argumentType(member));
+
+template<typename T> struct is_opportunistic_enum : std::false_type {};
+
+template<typename T>
+struct is_opportunistic_enum<OpportunisticEnum<T>> : std::true_type {};
+
+template<typename T>
+constexpr bool is_opportunistic_enum_v = is_opportunistic_enum<T>::value;
+
+template<typename T>
+constexpr const char *qt_getEnumName(T) { return nullptr; }
+
+template<typename T>
+std::optional<T> keyToValue(QStringView key)
+{
+    if constexpr (!keyValueMap<T>().empty()) {
+        static constexpr auto map = keyValueMap<T>();
+
+        static_assert(!std::get<QStringView>(map.front()).isEmpty(),
+                      "Unsupported enum type: keyValueMap() has invalid keys");
+
+        const auto it = std::find_if(map.cbegin(), map.cend(), [key](const auto &pair) {
+            return std::get<QStringView>(pair) == key;
+        });
+
+        if (Q_LIKELY(it != map.cend()))
+            return std::get<T>(*it);
+    } else if constexpr (qt_getEnumName(T{}) != nullptr) {
+        static const auto &metaEnum = QMetaEnum::fromType<T>();
+
+        auto isValid = false;
+        const auto value = metaEnum.keyToValue(key.toLatin1().constData(), &isValid);
+
+        if (Q_LIKELY(isValid))
+            return static_cast<T>(value);
+    } else {
+        static_assert(static_cast<int>(T{}) && false,
+                      "Unsupported enum type: Neither keyValueMap() nor Q_ENUM() found");
+    }
+
+    return {};
+}
+
+template<typename T>
+std::optional<int> keyToInt(QStringView key)
+{
+    if (const auto &value = keyToValue<T>(std::move(key)); Q_LIKELY(value))
+        return static_cast<int>(*value);
+
+    return {};
+}
 
 } // namespace detail
 
@@ -66,7 +133,8 @@ class ParserBase : public QObject
     Q_OBJECT
 
 public:
-    using Processing = std::function<void()>;
+    using ElementParser = std::function<void()>;
+    using GenericParser = std::function<void(const QXmlStreamAttribute *)>;
 
     explicit ParserBase(QXmlStreamReader *reader, QObject *parent = nullptr)
         : QObject{parent}
@@ -74,23 +142,36 @@ public:
     {}
 
     template <typename T>
-    Processing run(const std::function<void(T)> &callback)
+    GenericParser invoke(const std::function<void(T)> &callback)
     {
-        return [this, callback] {
-            read<T>(callback);
+        return [this, callback](const QXmlStreamAttribute *attribute) {
+            read<T>(attribute, callback);
         };
     }
 
     template <auto field, class Context,
               detail::RequireField<field> = true>
-    Processing setField(Context &context)
+    GenericParser assign(Context &context)
     {
-        return [this, &context] {
+        return [this, &context](const QXmlStreamAttribute *attribute) {
             using Value  = detail::ValueType <field>;
             using Object = detail::ObjectType<field>;
 
-            read<Value>([&context](Value value) {
+            read<Value>(attribute, [&context](Value value) {
                 (currentObject<Object>(context).*field) = std::move(value);
+            });
+        };
+    }
+
+    template <auto list, class Context,
+              detail::RequireField<list> = true>
+    GenericParser append(Context &context)
+    {
+        return [this, &context](const QXmlStreamAttribute *attribute) {
+            using Value = typename detail::ValueType<list>::value_type;
+
+            read<Value>(attribute, [&context](Value value) {
+                emplaceBack<list>(context, std::move(value));
             });
         };
     }
@@ -98,30 +179,54 @@ public:
     template <auto field, auto setter, class Context,
               detail::RequireMemberFunction<setter> = true,
               detail::RequireField<field> = true>
-    Processing setField(Context &context)
+    GenericParser assign(Context &context)
     {
-        return [this, &context] {
+        return [this, &context](const QXmlStreamAttribute *attribute) {
             using Value  = detail::ArgumentType<setter>;
             using Object = detail::ObjectType  <field>;
 
-            read<Value>([&context](Value value) {
+            read<Value>(attribute, [&context](Value value) {
                 (currentObject<Object>(context).*field.*setter)(std::move(value));
+            });
+        };
+    }
+
+    template <auto field, detail::FlagType<field> flag, class Context,
+              detail::RequireField<field> = true>
+    GenericParser assign(Context &context)
+    {
+        return [this, &context](const QXmlStreamAttribute *attribute) {
+            read<QString>(attribute, [this, &context](QStringView text) {
+                parseFlag(text, [&context](bool enabled) {
+                    using Object = detail::ObjectType<field>;
+                    auto &target = currentObject<Object>(context).*field;
+                    target.setFlag(flag, enabled);
+                });
             });
         };
     }
 
     template <auto field, VersionSegment segment, class Context,
               detail::RequireField<field> = true>
-    Processing setField(Context &context)
+    GenericParser assign(Context &context)
     {
-        return run<int>([&context](int number) {
+        return invoke<int>([&context](int number) {
             updateVersion(context.*field, segment, number);
         });
     };
 
 protected:
-    template <typename T>
-    void read(const std::function<void(T)> &store);
+    template <auto list, class Context,
+              detail::RequireField<list> = true>
+    static void emplaceBack(Context &context, typename detail::ValueType<list>::value_type &&value)
+    {
+        using Object = typename detail::ObjectType<list>;
+#if QT_VERSION_MAJOR >= 6
+        (currentObject<Object>(context).*list).emplaceBack(std::move(value));
+#else // QT_VERSION_MAJOR < 6
+        (currentObject<Object>(context).*list).append(std::move(value));
+#endif // QT_VERSION_MAJOR < 6
+    }
 
     static QString stateName(const QMetaEnum &metaEnum, int value);
 
@@ -129,7 +234,7 @@ protected:
     class AbstractContext
     {
     public:
-        using GenericStep = std::variant<std::monostate, int, Processing>;
+        using GenericStep = std::variant<std::monostate, int, ElementParser, GenericParser>;
 
         AbstractContext(int initialState) { enterState(initialState); }
 
@@ -144,6 +249,7 @@ protected:
         virtual QString stateName(int state) const = 0;
 
         std::optional<int> parseElement(QStringView elementName) const;
+        bool parseAttribute(QStringView elementName, const QXmlStreamAttribute &attribute) const;
 
     private:
         QStack<int> m_stack = {};
@@ -154,6 +260,49 @@ protected:
 private:
     void parseStartElement(const QLoggingCategory &category, AbstractContext &context);
     void parseEndElement(const QLoggingCategory &category, AbstractContext &context);
+
+    using KeyToIntFunction = std::optional<int> (*)(QStringView);
+
+    void parseEnum(QStringView text, KeyToIntFunction keyToInt, const std::function<void(int)> &store);
+    void parseEnum(QStringView text, KeyToIntFunction keyToInt, const std::function<void(int, QStringView)> &store);
+
+    template <typename T>
+    void parseEnum(QStringView text, const std::function<void(T)> &store)
+    {
+        parseEnum(text, &detail::keyToInt<T>, [store](int value) {
+            store(static_cast<T>(value));
+        });
+    }
+
+    template <typename T>
+    void parseEnum(QStringView text, const std::function<void(OpportunisticEnum<T>)> &store)
+    {
+        parseEnum(text, &detail::keyToInt<T>, [store](int value, QStringView text) {
+            if (Q_LIKELY(text.isEmpty()))
+                store(static_cast<T>(value));
+            else
+                store(text.toString());
+        });
+    }
+
+    void parseFlag(QStringView text, const std::function<void(bool)> &store);
+
+    template <typename T>
+    void parseValue(QStringView text, const std::function<void(T)> &store);
+
+    template <typename T>
+    void read(const QXmlStreamAttribute *attribute, const std::function<void(T)> &store)
+    {
+        const auto &text = readValue(attribute);
+
+        if constexpr (std::is_enum_v<T> || detail::is_opportunistic_enum_v<T>) {
+            parseEnum(text, store);
+        } else {
+            parseValue(text, store);
+        }
+    }
+
+    QString readValue(const QXmlStreamAttribute *attribute);
 
     QXmlStreamReader *const m_xml;
 };
@@ -166,7 +315,7 @@ public:
 
     using State          = StateEnum;
     using Transition     = std::function<State()>;
-    using ParseStep      = std::variant<std::monostate, Transition, Processing>;
+    using ParseStep      = std::variant<std::monostate, Transition, ElementParser, GenericParser>;
     using ElementTable   = QHash<QStringView, ParseStep>;
     using StateTable     = QHash<State, ElementTable>;
     using NamespaceTable = QHash<QStringView, StateTable>;
@@ -185,11 +334,7 @@ public:
     static Transition transition(Context &context)
     {
         return [&context] {
-            using Value  = typename detail::ValueType <list>::value_type;
-            using Object = typename detail::ObjectType<list>;
-
-            (currentObject<Object>(context).*list).append(Value{});
-
+            emplaceBack<list>(context, {});
             return nextState;
         };
     }

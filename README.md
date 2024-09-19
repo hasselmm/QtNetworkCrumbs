@@ -66,20 +66,23 @@ The declarative XML parser provided here easily turns such XML
   </version>
 
   <icons>
-    <icon>
+    <icon type="default">
       <mimetype>image/png</mimetype>
       <width>384</width>
       <height>256</height>
       <url>/icons/test.png</url>
     </icon>
 
-    <icon>
+    <icon type="banner">
       <mimetype>image/webp</mimetype>
       <width>768</width>
       <height>512</height>
       <url>/icons/test.webp</url>
     </icon>
   </icons>
+
+  <url>https://ecosia.org/</url>
+  <url>https://mission-lifeline.de/en/</url>
 </root>
 ```
 
@@ -90,13 +93,18 @@ struct TestResult
 {
     struct Icon
     {
+        enum Type { Default, Banner };
+
+        Type    type     = {};
         QString mimeType = {};
         QSize   size     = {};
         QUrl    url      = {};
+        QString relation = {};
     };
 
     QVersionNumber version = {};
     QList<Icon>    icons   = {};
+    QList<QUrl>    urls    = {};
 };
 ```
 
@@ -113,11 +121,12 @@ const auto states = StateTable {
         State::Root, {
             {u"version",    transition<State::Version>()},
             {u"icons",      transition<State::IconList>()},
+            {u"url",        append<&TestResult::urls>(result)},
         }
     }, {
         State::Version, {
-            {u"major",      setField<&TestResult::version, VersionSegment::Major>(result)},
-            {u"minor",      setField<&TestResult::version, VersionSegment::Minor>(result)},
+            {u"major",      assign<&TestResult::version, VersionSegment::Major>(result)},
+            {u"minor",      assign<&TestResult::version, VersionSegment::Minor>(result)},
         }
     }, {
         State::IconList, {
@@ -125,10 +134,12 @@ const auto states = StateTable {
         }
     }, {
         State::Icon, {
-            {u"mimetype",   setField<&TestResult::Icon::mimeType>(result)},
-            {u"width",      setField<&TestResult::Icon::size, &QSize::setWidth>(result)},
-            {u"height",     setField<&TestResult::Icon::size, &QSize::setHeight>(result)},
-            {u"url",        setField<&TestResult::Icon::url>(result)},
+            {u"@type",      assign<&TestResult::Icon::type>(result)},
+            {u"mimetype",   assign<&TestResult::Icon::mimeType>(result)},
+            {u"width",      assign<&TestResult::Icon::size, &QSize::setWidth>(result)},
+            {u"height",     assign<&TestResult::Icon::size, &QSize::setHeight>(result)},
+            {u"url/@rel",   assign<&TestResult::Icon::relation>(result)},
+            {u"url",        assign<&TestResult::Icon::url>(result)},
         }
     }
 };
