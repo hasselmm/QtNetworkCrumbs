@@ -21,9 +21,17 @@ function(add_testcase SOURCE_FILENAME) # [SOURCES...]
     add_test(NAME "${TESTCASE_NAME}" COMMAND ${TEST_RUNNER} "$<TARGET_FILE:${TESTCASE_NAME}>")
 endfunction()
 
+qnc_add_library(
+    QncTestSuport STATIC
+    qnctestsupport.cpp
+    qnctestsupport.h
+)
+
+target_link_libraries(QncTestSuport PUBLIC Qt::Test)
+
 add_testcase(tst_httpparser.cpp   LIBRARIES QncHttp)
 add_testcase(tst_mdnsmessages.cpp LIBRARIES QncMdns)
 add_testcase(tst_mdnsresolver.cpp LIBRARIES QncMdns)
-add_testcase(tst_qncparse.cpp     LIBRARIES QncCore)
+add_testcase(tst_qncparse.cpp     LIBRARIES QncCore QncTestSuport)
 add_testcase(tst_ssdpresolver.cpp LIBRARIES QncSsdp)
 add_testcase(tst_xmlparser.cpp    LIBRARIES QncXml)
