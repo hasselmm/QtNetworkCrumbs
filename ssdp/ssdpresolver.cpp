@@ -260,10 +260,10 @@ QDebug operator<<(QDebug debug, const qnc::ssdp::ServiceDescription &service)
         debug.nospace() << service.staticMetaObject.className();
 
     return debug.nospace()
-            << "(" << service.name()
-            << ", type=" << service.type()
-            << ", location=" << service.locations()
+            << "("               << service.name()
+            << ", type="         << service.type()
+            << ", location="     << service.locations()
             << ", alt-location=" << service.alternativeLocations()
-            << ", expires=" << service.expires()
+            << ", expires="      << service.expires()
             << ")";
 }
