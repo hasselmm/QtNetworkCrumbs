@@ -139,7 +139,7 @@ private slots:
         QCOMPARE(expiryDateTime(cacheControl, expires, now), expectedDateTime);
     }
 
-    void testParseMessage()
+    void testParseRequest()
     {
         const auto &message = Message::parse("M-SEARCH * HTTP/1.1\r\n"
                                              "HOST: 239.255.255.250:1900\r\n"
@@ -148,19 +148,55 @@ private slots:
                                              "ST: upnp:rootdevice\r\n"
                                              "\r\n"_ba);
 
-        QCOMPARE(message.verb,     "M-SEARCH");
-        QCOMPARE(message.resource,        "*");
-        QCOMPARE(message.protocol, "HTTP/1.1");
-        QCOMPARE(message.headers.size(),    4);
+        QCOMPARE(message.type(),  Message::Type::Request);
+        QCOMPARE(message.protocol(),          "HTTP/1.1");
+        QCOMPARE(message.verb(),              "M-SEARCH");
+        QCOMPARE(message.resource(),                 "*");
+        QCOMPARE(message.statusCode().has_value(), false);
+        QCOMPARE(message.statusPhrase(),              "");
+        QCOMPARE(message.headers().size(),             4);
 
-        QCOMPARE(message.headers[0].first,  "Host");
-        QCOMPARE(message.headers[0].second, "239.255.255.250:1900");
-        QCOMPARE(message.headers[1].first,  "MAN");
-        QCOMPARE(message.headers[1].second, "\"ssdp:discover\"");
-        QCOMPARE(message.headers[2].first,  "MX");
-        QCOMPARE(message.headers[2].second, "1");
-        QCOMPARE(message.headers[3].first,  "ST");
-        QCOMPARE(message.headers[3].second, "upnp:rootdevice");
+        QCOMPARE(message.headers().at(0).first,  "Host");
+        QCOMPARE(message.headers().at(0).second, "239.255.255.250:1900");
+        QCOMPARE(message.headers().at(1).first,  "MAN");
+        QCOMPARE(message.headers().at(1).second, "\"ssdp:discover\"");
+        QCOMPARE(message.headers().at(2).first,  "MX");
+        QCOMPARE(message.headers().at(2).second, "1");
+        QCOMPARE(message.headers().at(3).first,  "ST");
+        QCOMPARE(message.headers().at(3).second, "upnp:rootdevice");
+    }
+
+    void testParseResponse()
+    {
+        const auto &message = Message::parse("HTTP/1.1 200 OK\r\n"
+                                             "Cache-Control: max-age=1800\r\n"
+                                             "Location: http://192.168.0.4:49000/servicedesc.xml\r\n"
+                                             "Server: Hyper 6000 UPnP/1.0 Company Hyper 6000 1.2.3\r\n"
+                                             "Ext: \r\n"
+                                             "ST: upnp:rootdevice\r\n"
+                                             "USN: uuid:285fe440-2eee-4a0e-b11c-d051f4caa274:upnp:rootdevice\r\n"
+                                             "\r\n"_ba);
+
+        QCOMPARE(message.type(), Message::Type::Response);
+        QCOMPARE(message.protocol(),          "HTTP/1.1");
+        QCOMPARE(message.verb(),                      "");
+        QCOMPARE(message.resource(),                  "");
+        QCOMPARE(message.statusCode(),               200);
+        QCOMPARE(message.statusPhrase(),            "OK");
+        QCOMPARE(message.headers().size(),             6);
+
+        QCOMPARE(message.headers().at(0).first,  "Cache-Control");
+        QCOMPARE(message.headers().at(0).second, "max-age=1800");
+        QCOMPARE(message.headers().at(1).first,  "Location");
+        QCOMPARE(message.headers().at(1).second, "http://192.168.0.4:49000/servicedesc.xml");
+        QCOMPARE(message.headers().at(2).first,  "Server");
+        QCOMPARE(message.headers().at(2).second, "Hyper 6000 UPnP/1.0 Company Hyper 6000 1.2.3");
+        QCOMPARE(message.headers().at(3).first,  "Ext");
+        QCOMPARE(message.headers().at(3).second, "");
+        QCOMPARE(message.headers().at(4).first,  "ST");
+        QCOMPARE(message.headers().at(4).second, "upnp:rootdevice");
+        QCOMPARE(message.headers().at(5).first,  "USN");
+        QCOMPARE(message.headers().at(5).second, "uuid:285fe440-2eee-4a0e-b11c-d051f4caa274:upnp:rootdevice");
     }
 
 private:

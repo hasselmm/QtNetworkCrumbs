@@ -114,6 +114,7 @@ QByteArray Resolver::finalizeQuery(const QHostAddress &address, const QByteArray
 
 NotifyMessage NotifyMessage::parse(const QByteArray &data, const QDateTime &now)
 {
+    constexpr auto s_ssdpVerbSearch                 = "M-SEARCH"_baview;
     constexpr auto s_ssdpVerbNotify                 = "NOTIFY"_baview;
     constexpr auto s_ssdpResourceAny                = "*"_baview;
     constexpr auto s_ssdpProtocolHttp11             = "HTTP/1.1"_baview;
@@ -129,23 +130,36 @@ NotifyMessage NotifyMessage::parse(const QByteArray &data, const QDateTime &now)
 
     const auto &message = http::Message::parse(data);
 
-    if (message.verb.isEmpty()) {
-        qCWarning(lcResolver, "Ignoring message with malformed HTTP header");
+    if (message.isInvalid()) {
+        qCWarning(lcResolver, "Ignoring malformed HTTP message");
         return {};
     }
 
-    if (message.protocol != s_ssdpProtocolHttp11) {
-        qCWarning(lcResolver, "Ignoring unknown protocol: %s", message.protocol.constData());
+    if (message.protocol() != s_ssdpProtocolHttp11) {
+        qCWarning(lcResolver, "Ignoring unknown protocol: %s", message.protocol().constData());
         return {};
     }
 
-    if (message.verb != s_ssdpVerbNotify) {
-        qCDebug(lcResolver, "Ignoring %s message", message.verb.constData());
-        return {};
-    }
+    if (message.type() == http::Message::Type::Request) {
+        if (message.verb() == s_ssdpVerbSearch)
+            return {};
 
-    if (message.resource != s_ssdpResourceAny) {
-        qCDebug(lcResolver, "Ignoring unknown resource: %s", message.resource.constData());
+        if (message.verb() != s_ssdpVerbNotify) {
+            qCDebug(lcResolver, "Ignoring unsupported verb: %s", message.verb().constData());
+            return {};
+        }
+
+        if (message.resource() != s_ssdpResourceAny) {
+            qCDebug(lcResolver, "Ignoring unsupported resource: %s", message.resource().constData());
+            return {};
+        }
+    } else if (message.type() == http::Message::Type::Response) {
+        if (message.statusCode() != 200) {
+            qCDebug(lcResolver, "Ignoring unsupported status code: %d", message.statusCode().value());
+            return {};
+        }
+    } else {
+        qCWarning(lcResolver, "Ignoring unexpected HTTP message");
         return {};
     }
 
@@ -154,7 +168,7 @@ NotifyMessage NotifyMessage::parse(const QByteArray &data, const QDateTime &now)
     auto cacheControl = QByteArray{};
     auto expires      = QByteArray{};
 
-    for (const auto &[name, value] : message.headers) {
+    for (const auto &[name, value] : message.headers()) {
         if (name == s_ssdpHeaderUniqueServiceName)
             response.serviceName = QUrl::fromPercentEncoding(value);
         else if (name == s_ssdpHeaderNotifyType)
@@ -171,12 +185,16 @@ NotifyMessage NotifyMessage::parse(const QByteArray &data, const QDateTime &now)
             response.altLocations += parseAlternativeLocations(value);
     }
 
-    if (notifyType == s_ssdpNotifySubTypeAlive)
+    if (message.type() == http::Message::Type::Request) {
+        if (notifyType == s_ssdpNotifySubTypeAlive)
+            response.type = NotifyMessage::Type::Alive;
+        else if (notifyType == s_ssdpNotifySubTypeByeBye)
+            response.type = NotifyMessage::Type::ByeBye;
+        else
+            return {};
+    } else if (message.type() == http::Message::Type::Response) {
         response.type = NotifyMessage::Type::Alive;
-    else if (notifyType == s_ssdpNotifySubTypeByeBye)
-        response.type = NotifyMessage::Type::ByeBye;
-    else
-        return {};
+    }
 
     response.expiry = http::expiryDateTime(cacheControl, expires, now);
 

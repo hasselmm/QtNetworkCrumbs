@@ -11,6 +11,9 @@
 #include <QByteArray>
 #include <QList>
 
+// STL headers
+#include <optional>
+
 class QDateTime;
 class QIODevice;
 
@@ -102,17 +105,44 @@ static_assert(std::is_same_v<QStringView, CaseInsensitive<QLatin1String>::view_t
 static_assert(std::is_same_v<QStringView, CaseInsensitive<QString>::view_type>);
 static_assert(std::is_same_v<QStringView, CaseInsensitive<QStringView>::view_type>);
 
-struct Message
+class Message
 {
+    Q_GADGET
+
+public:
     using HeaderList = QList<std::pair<CaseInsensitive<QByteArray>, QByteArray>>;
 
-    QByteArray verb;
-    QByteArray resource;
-    QByteArray protocol;
-    HeaderList headers = {};
+    enum class Type {
+        Invalid,
+        Request,
+        Response,
+    };
+
+    Q_ENUM(Type)
+
+    constexpr Message() noexcept = default;
+
+    [[nodiscard]] constexpr Type      type() const { return m_type; }
+    [[nodiscard]] constexpr bool isInvalid() const { return type() == Type::Invalid; }
+    [[nodiscard]] HeaderList       headers() const { return m_headers; }
+
+
+    [[nodiscard]] QByteArray            protocol() const;
+    [[nodiscard]] QByteArray                verb() const;
+    [[nodiscard]] QByteArray            resource() const;
+    [[nodiscard]] std::optional<uint> statusCode() const;
+    [[nodiscard]] QByteArray        statusPhrase() const;
 
     [[nodiscard]] static Message parse(const QByteArray &data);
     [[nodiscard]] static Message parse(QIODevice *device);
+
+private:
+    [[nodiscard]] static Message parseStatusLine(const QByteArray &line);
+    [[nodiscard]] QByteArray statusField(Type expectedType, int index) const;
+
+    Type           m_type    = Type::Invalid;
+    QByteArrayList m_status  = {};
+    HeaderList     m_headers = {};
 };
 
 QDateTime parseDateTime(const QByteArray &text);
