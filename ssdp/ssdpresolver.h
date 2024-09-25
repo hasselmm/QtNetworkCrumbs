@@ -57,6 +57,8 @@ struct NotifyMessage
         ByeBye,
     };
 
+    Q_ENUM(Type)
+
     Type        type         = Type::Invalid;
     QString     serviceName  = {};
     QString     serviceType  = {};
@@ -66,6 +68,8 @@ struct NotifyMessage
 
     static NotifyMessage parse(const QByteArray &data, const QDateTime &now);
     static NotifyMessage parse(const QByteArray &data);
+
+    Q_GADGET
 };
 
 struct ServiceLookupRequest
@@ -102,6 +106,7 @@ protected:
 
 } // namespace qnc::ssdp
 
+QDebug operator<<(QDebug debug, const qnc::ssdp::NotifyMessage      &message);
 QDebug operator<<(QDebug debug, const qnc::ssdp::ServiceDescription &service);
 
 #endif // QNCSSDP_RESOLVER_H

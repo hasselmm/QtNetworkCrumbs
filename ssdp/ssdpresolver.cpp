@@ -30,11 +30,12 @@ constexpr auto s_ssdpKeyMaximumDelay    = "{maximum-delay}"_baview;
 constexpr auto s_ssdpKeyServiceType     = "{service-type}"_baview;
 
 constexpr auto s_ssdpQueryTemplate = "M-SEARCH * HTTP/1.1\r\n"
-                                     "HOST: {multicast-group}:{udp-port}\r\n"
-                                     "MAN: \"ssdp:discover\"\r\n"
-                                     "MM: {minimum-delay}\r\n"
-                                     "MX: {maximum-delay}\r\n"
                                      "ST: {service-type}\r\n"
+                                     "MAN: \"ssdp:discover\"\r\n"
+                                     "HOST: {multicast-group}:{udp-port}\r\n"
+                                     "MX: {maximum-delay}\r\n"
+                                     "MM: {minimum-delay}\r\n"
+                                     "Content-Length: 0\r\n"
                                      "\r\n"_baview;
 
 QList<QUrl> parseAlternativeLocations(compat::ByteArrayView text)
@@ -108,12 +109,16 @@ quint16 Resolver::port() const
 
 QByteArray Resolver::finalizeQuery(const QHostAddress &address, const QByteArray &query) const
 {
-    const auto &group = multicastGroup(address);
-    return QByteArray{query}.replace(s_ssdpKeyMulticastGroup, group.toString().toLatin1());
+    const auto &group = multicastGroup(address).toString();
+
+    auto finalizedQuery = QByteArray{query};
+    finalizedQuery.replace(s_ssdpKeyMulticastGroup, group.toLatin1());
+    return finalizedQuery;
 }
 
 NotifyMessage NotifyMessage::parse(const QByteArray &data, const QDateTime &now)
 {
+    constexpr auto s_ssdpVerbSearch                 = "M-SEARCH"_baview;
     constexpr auto s_ssdpVerbNotify                 = "NOTIFY"_baview;
     constexpr auto s_ssdpResourceAny                = "*"_baview;
     constexpr auto s_ssdpProtocolHttp11             = "HTTP/1.1"_baview;
@@ -129,23 +134,36 @@ NotifyMessage NotifyMessage::parse(const QByteArray &data, const QDateTime &now)
 
     const auto &message = http::Message::parse(data);
 
-    if (message.verb.isEmpty()) {
-        qCWarning(lcResolver, "Ignoring message with malformed HTTP header");
+    if (message.isInvalid()) {
+        qCWarning(lcResolver, "Ignoring malformed HTTP message");
         return {};
     }
 
-    if (message.protocol != s_ssdpProtocolHttp11) {
-        qCWarning(lcResolver, "Ignoring unknown protocol: %s", message.protocol.constData());
+    if (message.protocol() != s_ssdpProtocolHttp11) {
+        qCWarning(lcResolver, "Ignoring unknown protocol: %s", message.protocol().constData());
         return {};
     }
 
-    if (message.verb != s_ssdpVerbNotify) {
-        qCDebug(lcResolver, "Ignoring %s message", message.verb.constData());
-        return {};
-    }
+    if (message.type() == http::Message::Type::Request) {
+        if (message.verb() == s_ssdpVerbSearch)
+            return {};
 
-    if (message.resource != s_ssdpResourceAny) {
-        qCDebug(lcResolver, "Ignoring unknown resource: %s", message.resource.constData());
+        if (message.verb() != s_ssdpVerbNotify) {
+            qCDebug(lcResolver, "Ignoring unsupported verb: %s", message.verb().constData());
+            return {};
+        }
+
+        if (message.resource() != s_ssdpResourceAny) {
+            qCDebug(lcResolver, "Ignoring unsupported resource: %s", message.resource().constData());
+            return {};
+        }
+    } else if (message.type() == http::Message::Type::Response) {
+        if (message.statusCode() != 200) {
+            qCDebug(lcResolver, "Ignoring unsupported status code: %d", message.statusCode().value());
+            return {};
+        }
+    } else {
+        qCWarning(lcResolver, "Ignoring unexpected HTTP message");
         return {};
     }
 
@@ -154,7 +172,7 @@ NotifyMessage NotifyMessage::parse(const QByteArray &data, const QDateTime &now)
     auto cacheControl = QByteArray{};
     auto expires      = QByteArray{};
 
-    for (const auto &[name, value] : message.headers) {
+    for (const auto &[name, value] : message.headers()) {
         if (name == s_ssdpHeaderUniqueServiceName)
             response.serviceName = QUrl::fromPercentEncoding(value);
         else if (name == s_ssdpHeaderNotifyType)
@@ -171,12 +189,16 @@ NotifyMessage NotifyMessage::parse(const QByteArray &data, const QDateTime &now)
             response.altLocations += parseAlternativeLocations(value);
     }
 
-    if (notifyType == s_ssdpNotifySubTypeAlive)
+    if (message.type() == http::Message::Type::Request) {
+        if (notifyType == s_ssdpNotifySubTypeAlive)
+            response.type = NotifyMessage::Type::Alive;
+        else if (notifyType == s_ssdpNotifySubTypeByeBye)
+            response.type = NotifyMessage::Type::ByeBye;
+        else
+            return {};
+    } else if (message.type() == http::Message::Type::Response) {
         response.type = NotifyMessage::Type::Alive;
-    else if (notifyType == s_ssdpNotifySubTypeByeBye)
-        response.type = NotifyMessage::Type::ByeBye;
-    else
-        return {};
+    }
 
     response.expiry = http::expiryDateTime(cacheControl, expires, now);
 
@@ -212,6 +234,24 @@ void Resolver::processDatagram(const QNetworkDatagram &datagram)
 
 } // namespace qnc::ssdp
 
+QDebug operator<<(QDebug debug, const qnc::ssdp::NotifyMessage &message)
+{
+    const auto _ = QDebugStateSaver{debug};
+
+    if (debug.verbosity() >= QDebug::DefaultVerbosity)
+        debug.nospace() << message.staticMetaObject.className();
+
+
+    return debug.nospace()
+            << "("               << message.type
+            << ", serviceName="  << message.serviceName
+            << ", serviceType="  << message.serviceType
+            << ", locations="    << message.locations
+            << ", altLocations=" << message.altLocations
+            << ", expiry="       << message.expiry
+            << ")";
+}
+
 QDebug operator<<(QDebug debug, const qnc::ssdp::ServiceDescription &service)
 {
     const auto _ = QDebugStateSaver{debug};
@@ -220,10 +260,10 @@ QDebug operator<<(QDebug debug, const qnc::ssdp::ServiceDescription &service)
         debug.nospace() << service.staticMetaObject.className();
 
     return debug.nospace()
-            << "(" << service.name()
-            << ", type=" << service.type()
-            << ", location=" << service.locations()
+            << "("               << service.name()
+            << ", type="         << service.type()
+            << ", location="     << service.locations()
             << ", alt-location=" << service.alternativeLocations()
-            << ", expires=" << service.expires()
+            << ", expires="      << service.expires()
             << ")";
 }

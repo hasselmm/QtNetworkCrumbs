@@ -26,6 +26,8 @@ constexpr auto s_ascTimeDateFormat = "ddd MMM d hh:mm:ss yyyy"_L1;          // e
 constexpr auto s_cacheControlNoCache = "no-cache"_baview;
 constexpr auto s_cacheControlMaxAge  = "max-age="_baview;
 
+constexpr auto s_protocolPrefixHttp = "HTTP/"_baview;
+
 template <class Container,
           typename ValueType = typename Container::value_type,
           class Iterator = typename Container::const_iterator>
@@ -45,6 +47,66 @@ StringView suffixView(const String &text, qsizetype offset)
 
 } // namespace
 
+Message Message::parseStatusLine(const QByteArray &line)
+{
+    auto message = Message{};
+
+    if (const auto &status = line.trimmed().split(' ');
+            Q_LIKELY(status.size() == 3)) {
+        if (status.first().startsWith(s_protocolPrefixHttp)) {
+            message.m_type   = Type::Response;
+            message.m_status = status;
+        } else if (status.last().startsWith(s_protocolPrefixHttp)) {
+            message.m_type   = Type::Request;
+            message.m_status = status;
+        }
+    }
+
+    return message;
+}
+
+QByteArray Message::statusField(Type expectedType, int index) const
+{
+    if (Q_UNLIKELY(type() != expectedType))
+        return {};
+
+    return m_status[index];
+}
+
+QByteArray Message::protocol() const
+{
+    switch (type()) {
+    case Type::Request:
+        return m_status.last();
+    case Type::Response:
+        return m_status.first();
+    case Type::Invalid:
+        break;
+    }
+
+    return {};
+}
+
+QByteArray Message::verb() const
+{
+    return statusField(Type::Request, 0);
+}
+
+QByteArray Message::resource() const
+{
+    return statusField(Type::Request, 1);
+}
+
+std::optional<uint> Message::statusCode() const
+{
+    return qnc::parse<uint>(statusField(Type::Response, 1));
+}
+
+QByteArray Message::statusPhrase() const
+{
+    return statusField(Type::Response, 2);
+}
+
 Message Message::parse(const QByteArray &data)
 {
     auto buffer = QBuffer{};
@@ -61,16 +123,10 @@ Message Message::parse(QIODevice *device)
     if (!device->canReadLine())
         return {};
 
-    const auto &statusLine = device->readLine().trimmed().split(' ');
+    auto message = Message::parseStatusLine(device->readLine());
 
-    if (statusLine.size() != 3)
+    if (message.isInvalid())
         return {};
-
-    auto message = Message {
-        statusLine[0],
-        statusLine[1],
-        statusLine[2],
-    };
 
     while (device->canReadLine()) {
         const auto &line = device->readLine();
@@ -80,20 +136,20 @@ Message Message::parse(QIODevice *device)
             break;
 
         if (line[0] == ' ') {
-            if (message.headers.isEmpty()) {
+            if (message.m_headers.isEmpty()) {
                 qCWarning(lcHttpParser, "Ignoring invalid header line: %s", line.constData());
                 continue;
             }
 
-            message.headers.last().second.append(trimmedLine);
+            message.m_headers.last().second.append(trimmedLine);
         } else if (const auto colon = line.indexOf(':'); colon > 0) {
             auto name  = line.left(colon).trimmed();
             auto value = line.mid(colon + 1).trimmed();
 
 #if QT_VERSION_MAJOR >= 6
-            message.headers.emplaceBack(std::move(name), std::move(value));
+            message.m_headers.emplaceBack(std::move(name), std::move(value));
 #else // QT_VERSION_MAJOR < 6
-            message.headers.append({std::move(name), std::move(value)});
+            message.m_headers.append({std::move(name), std::move(value)});
 #endif // QT_VERSION_MAJOR < 6
         } else {
             qCWarning(lcHttpParser, "Ignoring invalid header line: %s", line.constData());
