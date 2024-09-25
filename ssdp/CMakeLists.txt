@@ -7,6 +7,6 @@ qnc_add_library(
 target_link_libraries(QncSsdp PUBLIC QncHttp)
 
 if (NOT IOS) # FIXME Figure out code signing on Github
-    qnc_add_executable(SSDPResolverDemo TYPE tool ssdpresolverdemo.cpp)
-    target_link_libraries(SSDPResolverDemo PRIVATE QncSsdp)
+    qnc_add_executable(ssdpresolverdemo TYPE tool ssdpresolverdemo.cpp)
+    target_link_libraries(ssdpresolverdemo PRIVATE QncSsdp)
 endif()
