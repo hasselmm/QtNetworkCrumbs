@@ -109,8 +109,11 @@ quint16 Resolver::port() const
 
 QByteArray Resolver::finalizeQuery(const QHostAddress &address, const QByteArray &query) const
 {
-    const auto &group = multicastGroup(address);
-    return QByteArray{query}.replace(s_ssdpKeyMulticastGroup, group.toString().toLatin1());
+    const auto &group = multicastGroup(address).toString();
+
+    auto finalizedQuery = QByteArray{query};
+    finalizedQuery.replace(s_ssdpKeyMulticastGroup, group.toLatin1());
+    return finalizedQuery;
 }
 
 NotifyMessage NotifyMessage::parse(const QByteArray &data, const QDateTime &now)
