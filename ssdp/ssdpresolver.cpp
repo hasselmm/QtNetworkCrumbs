@@ -234,6 +234,24 @@ void Resolver::processDatagram(const QNetworkDatagram &datagram)
 
 } // namespace qnc::ssdp
 
+QDebug operator<<(QDebug debug, const qnc::ssdp::NotifyMessage &message)
+{
+    const auto _ = QDebugStateSaver{debug};
+
+    if (debug.verbosity() >= QDebug::DefaultVerbosity)
+        debug.nospace() << message.staticMetaObject.className();
+
+
+    return debug.nospace()
+            << "("               << message.type
+            << ", serviceName="  << message.serviceName
+            << ", serviceType="  << message.serviceType
+            << ", locations="    << message.locations
+            << ", altLocations=" << message.altLocations
+            << ", expiry="       << message.expiry
+            << ")";
+}
+
 QDebug operator<<(QDebug debug, const qnc::ssdp::ServiceDescription &service)
 {
     const auto _ = QDebugStateSaver{debug};
