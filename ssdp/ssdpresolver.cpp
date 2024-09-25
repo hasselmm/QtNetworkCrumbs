@@ -30,11 +30,11 @@ constexpr auto s_ssdpKeyMaximumDelay    = "{maximum-delay}"_baview;
 constexpr auto s_ssdpKeyServiceType     = "{service-type}"_baview;
 
 constexpr auto s_ssdpQueryTemplate = "M-SEARCH * HTTP/1.1\r\n"
-                                     "HOST: {multicast-group}:{udp-port}\r\n"
-                                     "MAN: \"ssdp:discover\"\r\n"
-                                     "MM: {minimum-delay}\r\n"
-                                     "MX: {maximum-delay}\r\n"
                                      "ST: {service-type}\r\n"
+                                     "MAN: \"ssdp:discover\"\r\n"
+                                     "HOST: {multicast-group}:{udp-port}\r\n"
+                                     "MX: {maximum-delay}\r\n"
+                                     "MM: {minimum-delay}\r\n"
                                      "\r\n"_baview;
 
 QList<QUrl> parseAlternativeLocations(compat::ByteArrayView text)
