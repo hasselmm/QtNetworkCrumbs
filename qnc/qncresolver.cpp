@@ -165,8 +165,9 @@ MulticastResolver::createSocket(const QNetworkInterface &iface, const QHostAddre
 
     const auto &bindAddress = wildcardAddress(address);
     const auto &bindMode = QUdpSocket::ShareAddress | QUdpSocket::ReuseAddressHint;
+    constexpr auto randomPort = 0;
 
-    if (!socket->bind(bindAddress, port(), bindMode)) {
+    if (!socket->bind(bindAddress, randomPort, bindMode)) {
         qCWarning(lcMulticast, "Could not bind multicast socket to %ls: %ls",
                   qUtf16Printable(address.toString()),
                   qUtf16Printable(socket->errorString()));
