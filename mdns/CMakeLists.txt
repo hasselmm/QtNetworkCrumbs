@@ -12,8 +12,8 @@ target_link_libraries(QncMdns PUBLIC QncCore)
 
 
 if (NOT IOS) # FIXME Figure out code signing on Github
-    qnc_add_executable(MDNSResolverDemo TYPE tool mdnsresolverdemo.cpp)
-    target_link_libraries(MDNSResolverDemo PRIVATE QncMdns)
+    qnc_add_executable(mdnsresolverdemo TYPE tool mdnsresolverdemo.cpp)
+    target_link_libraries(mdnsresolverdemo PRIVATE QncMdns)
 endif()
 
 #if (WIN32)
