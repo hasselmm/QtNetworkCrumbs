@@ -4,8 +4,8 @@
 #include "httpparser.h"
 
 // QtNetworkCrumbs headers
-#include "qncliterals.h"
-#include "qncparse.h"
+#include "literals.h"
+#include "parse.h"
 
 // Qt headers
 #include <QBuffer>
@@ -99,7 +99,7 @@ QByteArray Message::resource() const
 
 std::optional<uint> Message::statusCode() const
 {
-    return qnc::parse<uint>(statusField(Type::Response, 1));
+    return core::parse<uint>(statusField(Type::Response, 1));
 }
 
 QByteArray Message::statusPhrase() const
@@ -196,7 +196,7 @@ QDateTime expiryDateTime(const QByteArray &cacheControl, const QByteArray &expir
             maxAge != cacheControlList.cend()) {
         const auto &value = suffixView(*maxAge, s_cacheControlMaxAge.length());
 
-        if (const auto seconds = qnc::parse<uint>(value))
+        if (const auto seconds = core::parse<uint>(value))
             return now.addSecs(*seconds);
     }
 

@@ -4,7 +4,7 @@
 #ifndef QNCSSDP_RESOLVER_H
 #define QNCSSDP_RESOLVER_H
 
-#include "qncresolver.h"
+#include "multicastresolver.h"
 
 #include <QDateTime>
 #include <QPointer>

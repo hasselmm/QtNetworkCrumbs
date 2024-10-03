@@ -1,15 +1,15 @@
 /* QtNetworkCrumbs - Some networking toys for Qt
- * Copyright (C) 2023 Mathias Hasselmann
+ * Copyright (C) 2019-2024 Mathias Hasselmann
  */
-#ifndef QNC_QNCLITERALS_H
-#define QNC_QNCLITERALS_H
+#ifndef QNCCORE_LITERALS_H
+#define QNCCORE_LITERALS_H
 
 #include <QDateTime>
 #include <QString>
 #include <QUrl>
 
 namespace qnc {
-namespace literals {
+namespace core::literals {
 namespace compat {
 
 #if QT_VERSION >= QT_VERSION_CHECK(6,0,0)
@@ -118,10 +118,10 @@ inline auto operator ""_hex(const char *str, std::size_t len)
     return QByteArray::fromHex({str, static_cast<compat::lentype>(len)});
 }
 
-} // namespace literals
+} // namespace core::literals
 
-using namespace literals;
+using namespace core::literals;
 
 } // namespace qnc
 
-#endif // QNC_QNCLITERALS_H
+#endif // QNCCORE_LITERALS_H

@@ -1,11 +1,11 @@
 /* QtNetworkCrumbs - Some networking toys for Qt
- * Copyright (C) 2023 Mathias Hasselmann
+ * Copyright (C) 2019-2024 Mathias Hasselmann
  */
 
 #include "mdnsmessage.h"
 
 // QtNetworkCrumbs headers
-#include "qncliterals.h"
+#include "literals.h"
 
 // Qt headers
 #include <QHostAddress>

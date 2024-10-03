@@ -1,9 +1,9 @@
 /* QtNetworkCrumbs - Some networking toys for Qt
- * Copyright (C) 2023 Mathias Hasselmann
+ * Copyright (C) 2019-2024 Mathias Hasselmann
  */
 
 #include "httpparser.h"
-#include "qncliterals.h"
+#include "literals.h"
 
 #include <QTest>
 

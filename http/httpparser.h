@@ -5,7 +5,7 @@
 #define QNC_HTTPPARSER_H
 
 // QtNetworkCrumbs headers
-#include "qncliterals.h"
+#include "literals.h"
 
 // Qt headers
 #include <QByteArray>

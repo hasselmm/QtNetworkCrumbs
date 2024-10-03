@@ -1,9 +1,9 @@
 /* QtNetworkCrumbs - Some networking toys for Qt
- * Copyright (C) 2023 Mathias Hasselmann
+ * Copyright (C) 2019-2024 Mathias Hasselmann
  */
-#include "qncliterals.h"
+#include "literals.h"
 
-namespace qnc {
+namespace qnc::core {
 static_assert('*'_L1.unicode() == 42);
 static_assert("constexpr"_L1.size() == 9);
-} // namespace qnc
+} // namespace qnc::core

@@ -1,7 +1,7 @@
 /* QtNetworkCrumbs - Some networking toys for Qt
- * Copyright (C) 2023 Mathias Hasselmann
+ * Copyright (C) 2019-2024 Mathias Hasselmann
  */
-#include "qncparse.h"
+#include "parse.h"
 
 // STL headers
 #include <cmath>
@@ -10,7 +10,7 @@
 using QByteArrayView = QByteArray;
 #endif // QT_VERSION_MAJOR < 6
 
-namespace qnc::detail {
+namespace qnc::core::detail {
 
 template <>
 void parse(const QByteArrayView &text, bool &value, bool &isValid)
@@ -29,7 +29,7 @@ void parse(const QByteArrayView &text, bool &value, bool &isValid)
                || trimmedText.compare("disabled", Qt::CaseInsensitive) == 0) {
         value = false;
         isValid = true;
-    } else if (const auto &number = qnc::parse<int>(trimmedText)) {
+    } else if (const auto &number = core::parse<int>(trimmedText)) {
         value = (number != 0);
         isValid = true;
     } else {
@@ -95,4 +95,4 @@ template <> void parse(const QUtf8StringView &text, bool        &value, bool &is
 
 #endif // QT_VERSION_MAJOR >= 6
 
-} // namespace qnc::detail
+} // namespace qnc::core::detail

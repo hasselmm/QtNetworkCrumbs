@@ -6,7 +6,7 @@
 #include "mdnsmessage.h"
 #include "mdnsresolver.h"
 #include "mdnsurlfinder.h"
-#include "qncliterals.h"
+#include "literals.h"
 
 // Qt headers
 #include <QSignalSpy>

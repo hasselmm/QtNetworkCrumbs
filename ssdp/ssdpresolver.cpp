@@ -5,7 +5,7 @@
 
 // QtNetworkCrumbs headers
 #include "httpparser.h"
-#include "qncliterals.h"
+#include "literals.h"
 
 // Qt headers
 #include <QHostAddress>

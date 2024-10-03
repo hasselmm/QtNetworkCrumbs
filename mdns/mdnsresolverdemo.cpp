@@ -5,7 +5,7 @@
 // QtNetworkCrumbs headers
 #include "mdnsmessage.h"
 #include "mdnsresolver.h"
-#include "qncliterals.h"
+#include "literals.h"
 
 // Qt headers
 #include <QCommandLineParser>

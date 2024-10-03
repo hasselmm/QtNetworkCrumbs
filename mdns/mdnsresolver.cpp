@@ -6,7 +6,7 @@
 // QtNetworkCrumbs headers
 #include "mdnsmessage.h"
 #include "mdnsurlfinder.h"
-#include "qncliterals.h"
+#include "literals.h"
 
 // Qt headers
 #include <QHostAddress>
