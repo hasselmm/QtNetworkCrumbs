@@ -4,7 +4,7 @@
 #ifndef QNCMDNS_MDNSRESOLVER_H
 #define QNCMDNS_MDNSRESOLVER_H
 
-#include "qncresolver.h"
+#include "multicastresolver.h"
 
 class QHostAddress;
 class QNetworkDatagram;

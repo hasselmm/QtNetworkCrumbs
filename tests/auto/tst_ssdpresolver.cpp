@@ -4,7 +4,7 @@
 
 // QtNetworkCrumbs headers
 #include "ssdpresolver.h"
-#include "qncliterals.h"
+#include "literals.h"
 
 // Qt headers
 #include <QTest>

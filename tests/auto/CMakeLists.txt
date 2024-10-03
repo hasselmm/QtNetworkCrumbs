@@ -29,9 +29,9 @@ qnc_add_library(
 
 target_link_libraries(QncTestSuport PUBLIC Qt::Test)
 
+add_testcase(tst_coreparse.cpp    LIBRARIES QncCore QncTestSuport)
 add_testcase(tst_httpparser.cpp   LIBRARIES QncHttp)
 add_testcase(tst_mdnsmessages.cpp LIBRARIES QncMdns)
 add_testcase(tst_mdnsresolver.cpp LIBRARIES QncMdns)
-add_testcase(tst_qncparse.cpp     LIBRARIES QncCore QncTestSuport)
 add_testcase(tst_ssdpresolver.cpp LIBRARIES QncSsdp)
 add_testcase(tst_xmlparser.cpp    LIBRARIES QncXml QncTestSuport)

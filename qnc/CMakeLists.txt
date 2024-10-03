@@ -1,11 +1,14 @@
 qnc_add_library(
     QncCore STATIC
-    qncliterals.cpp
-    qncliterals.h
-    qncparse.cpp
-    qncparse.h
-    qncresolver.cpp
-    qncresolver.h
+
+    abstractresolver.cpp
+    abstractresolver.h
+    literals.cpp
+    literals.h
+    multicastresolver.cpp
+    multicastresolver.h
+    parse.cpp
+    parse.h
 )
 
 target_link_libraries(QncCore PUBLIC Qt::Network)

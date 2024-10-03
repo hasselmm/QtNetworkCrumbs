@@ -5,7 +5,7 @@
 
 // QtNetworkCrumbs headers
 #include "mdnsresolver.h"
-#include "qncliterals.h"
+#include "literals.h"
 
 namespace qnc::mdns {
 namespace {

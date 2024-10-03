@@ -1,13 +1,12 @@
 /* QtNetworkCrumbs - Some networking toys for Qt
- * Copyright (C) 2023 Mathias Hasselmann
+ * Copyright (C) 2019-2024 Mathias Hasselmann
  */
-#include "qncresolver.h"
+#include "multicastresolver.h"
 
 // Qt headers
 #include <QLoggingCategory>
 #include <QNetworkDatagram>
 #include <QNetworkInterface>
-#include <QTimer>
 #include <QUdpSocket>
 #include <QVariant>
 
@@ -15,9 +14,6 @@ namespace qnc::core {
 
 namespace {
 
-using namespace std::chrono_literals;
-
-Q_LOGGING_CATEGORY(lcResolver,  "qnc.core.resolver")
 Q_LOGGING_CATEGORY(lcMulticast, "qnc.core.resolver.multicast")
 
 QHostAddress wildcardAddress(const QHostAddress &address)
@@ -39,85 +35,6 @@ QHostAddress wildcardAddress(const QHostAddress &address)
 }
 
 } // namespace
-
-GenericResolver::GenericResolver(QObject *parent)
-    : QObject{parent}
-    , m_timer{new QTimer{this}}
-{
-    m_timer->callOnTimeout(this, &GenericResolver::onTimeout);
-    QTimer::singleShot(0, this, &GenericResolver::onTimeout);
-    m_timer->start(15s);
-}
-
-void GenericResolver::setScanInterval(std::chrono::milliseconds ms)
-{
-    if (scanIntervalAsDuration() != ms) {
-        m_timer->setInterval(ms);
-        emit scanIntervalChanged(scanInterval());
-    }
-}
-
-void GenericResolver::setScanInterval(int ms)
-{
-    if (scanInterval() != ms) {
-        m_timer->setInterval(ms);
-        emit scanIntervalChanged(scanInterval());
-    }
-}
-
-std::chrono::milliseconds GenericResolver::scanIntervalAsDuration() const
-{
-    return m_timer->intervalAsDuration();
-}
-
-int GenericResolver::scanInterval() const
-{
-    return m_timer->interval();
-}
-
-GenericResolver::SocketPointer
-GenericResolver::socketForAddress(const QHostAddress &address) const
-{
-    return m_sockets[address];
-}
-
-void GenericResolver::scanNetworkInterfaces()
-{
-    auto newSockets = SocketTable{};
-
-    const auto &allInterfaces = QNetworkInterface::allInterfaces();
-
-    for (const auto &iface : allInterfaces) {
-        if (!isSupportedInterface(iface))
-            continue;
-
-        const auto addressEntries = iface.addressEntries();
-        for (const auto &entry : addressEntries) {
-            if (!isSupportedAddress(entry.ip()))
-                continue;
-
-            if (const auto socket = socketForAddress(entry.ip())) {
-                newSockets.insert(entry.ip(), socket);
-                continue;
-            }
-
-            qCInfo(lcResolver, "Creating socket for %ls on %ls",
-                   qUtf16Printable(entry.ip().toString()),
-                   qUtf16Printable(iface.humanReadableName()));
-
-            if (const auto socket = createSocket(iface, entry.ip()))
-                newSockets.insert(entry.ip(), socket);
-        }
-    }
-
-    std::exchange(m_sockets, newSockets);
-}
-
-void GenericResolver::onTimeout()
-{
-    scanNetworkInterfaces();
-    submitQueries(m_sockets);
-}
 
 bool MulticastResolver::isSupportedInterface(const QNetworkInterface &iface) const
 {

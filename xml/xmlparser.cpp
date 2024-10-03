@@ -4,8 +4,8 @@
 #include "xmlparser.h"
 
 // QtNetworkCrumbs headers
-#include "qncliterals.h"
-#include "qncparse.h"
+#include "literals.h"
+#include "parse.h"
 
 // Qt headers
 #include <QUrl>
@@ -83,7 +83,7 @@ void reportIgnoredAttribute(const QLoggingCategory &category, const QXmlStreamRe
 template <typename T>
 std::optional<T> convert(QStringView text)
 {
-    return qnc::parse<T>(text);
+    return core::parse<T>(text);
 }
 
 template <>
@@ -203,7 +203,7 @@ void ParserBase::parseFlag(QStringView text, const std::function<void(bool)> &st
 
     if (trimmedText.isEmpty()) {
         store(true);
-    } else if (const auto parsed = qnc::parse<bool>(trimmedText)) {
+    } else if (const auto parsed = core::parse<bool>(trimmedText)) {
         store(parsed.value());
     } else {
         m_xml->raiseError(tr("Unexpected value for flag: %1").arg(trimmedText));

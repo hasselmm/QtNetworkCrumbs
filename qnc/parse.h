@@ -1,8 +1,8 @@
 /* QtNetworkCrumbs - Some networking toys for Qt
- * Copyright (C) 2023 Mathias Hasselmann
+ * Copyright (C) 2019-2024 Mathias Hasselmann
  */
-#ifndef QNC_QNCPARSE_H
-#define QNC_QNCPARSE_H
+#ifndef QNCCORE_PARSE_H
+#define QNCCORE_PARSE_H
 
 // Qt headers
 #include <QString>
@@ -11,7 +11,7 @@
 #include <limits>
 #include <optional>
 
-namespace qnc {
+namespace qnc::core {
 
 namespace detail {
 
@@ -78,6 +78,6 @@ std::optional<T> parse(const StringLike &text) { return detail::parse<T>(text); 
 template <typename T, class StringLike>
 std::optional<T> parse(const StringLike &text, int base) { return detail::parse<T>(text, base); }
 
-} // namespace qnc
+} // namespace qnc::core
 
-#endif // QNC_QNCPARSE_H
+#endif // QNCCORE_PARSE_H

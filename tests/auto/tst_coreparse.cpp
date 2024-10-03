@@ -3,8 +3,8 @@
  */
 
 // QtNetworkCrumbs headers
-#include "qncliterals.h"
-#include "qncparse.h"
+#include "literals.h"
+#include "parse.h"
 #include "qnctestsupport.h"
 
 // Qt headers
@@ -240,4 +240,4 @@ private slots:
 
 QTEST_GUILESS_MAIN(qnc::core::tests::ParseTest)
 
-#include "tst_qncparse.moc"
+#include "tst_coreparse.moc"
