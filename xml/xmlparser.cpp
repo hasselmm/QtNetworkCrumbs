@@ -4,6 +4,7 @@
 #include "xmlparser.h"
 
 // QtNetworkCrumbs headers
+#include "compat.h"
 #include "literals.h"
 #include "parse.h"
 
@@ -126,7 +127,7 @@ QString parseErrorMessage<QUrl>()
 
 void updateVersion(QVersionNumber &version, VersionSegment segment, int number)
 {
-    const auto index = static_cast<int>(segment);
+    const auto index = qToUnderlying(segment);
     auto segments = version.segments();
 
     if (segments.size() <= index)

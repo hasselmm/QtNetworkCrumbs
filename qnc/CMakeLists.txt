@@ -3,6 +3,7 @@ qnc_add_library(
 
     abstractresolver.cpp
     abstractresolver.h
+    compat.h
     literals.cpp
     literals.h
     multicastresolver.cpp
