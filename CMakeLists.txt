@@ -103,9 +103,9 @@ endfunction()
 add_custom_target(metadata SOURCES LICENSE README.md)
 
 add_subdirectory(.github)
+add_subdirectory(core)
 add_subdirectory(http)
 add_subdirectory(mdns)
-add_subdirectory(qnc)
 add_subdirectory(ssdp)
 add_subdirectory(xml)
 
