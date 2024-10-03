@@ -12,6 +12,8 @@ qnc_add_library(
     multicastresolver.h
     parse.cpp
     parse.h
+    treemodel.cpp
+    treemodel.h
 )
 
 target_link_libraries(QncCore PUBLIC Qt::Network)

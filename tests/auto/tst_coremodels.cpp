@@ -4,12 +4,21 @@
 
 #include "detailmodel.h"
 #include "literals.h"
+#include "treemodel.h"
 
 #include <QAbstractItemModelTester>
 #include <QSignalSpy>
 #include <QTest>
 
-namespace qnc::core::tests {
+namespace qnc::core {
+
+template <>
+QVariant TreeModel::ValueNode<DetailModel::Row>::displayText() const
+{
+    return m_value.name;
+}
+
+namespace tests {
 namespace {
 
 QList<int> makePath(int row, const QModelIndex &index); // -------------------------------------------------- tree paths
@@ -82,6 +91,34 @@ RowList four()
     };
 }
 
+class TestTreeModel : public TreeModel // ---------------------------------------------------------------- TestTreeModel
+{
+public:
+    using Data = DetailModel::Row;
+
+    QModelIndex addNode(const Data &data, const QModelIndex &parent = {});
+    void addNodes(const QList<Data> &dataList, const QModelIndex &parent = {});
+};
+
+QModelIndex TestTreeModel::addNode(const Data &data, const QModelIndex &parent)
+{
+    if (const auto parentNode = nodeForIndex(parent))
+        if (const auto childNode = parentNode->addChild<ValueNode<Data>>(data))
+            return indexForNode(childNode);
+
+    return {};
+}
+
+void TestTreeModel::addNodes(const QList<Data> &dataList, const QModelIndex &parent)
+{
+    for (const auto &data : dataList) {
+        const auto &index = addNode(data, parent);
+
+        if (data.hasChildren())
+            addNodes(data.children(), index);
+    }
+}
+
 // ----------------------------------------------------------------------------------------------------------- utilities
 
 template <typename T>
@@ -98,7 +135,6 @@ QList<T> flatten(const QList<T> &input)
 
     return result;
 }
-
 
 int typeId(const QVariant &variant)
 {
@@ -174,6 +210,37 @@ private slots:
             return;
     }
 
+    void testTreeModel_data()
+    {
+        QTest::addColumn<RowList>("rows");
+        QTest::newRow("empty") << empty();
+        QTest::newRow("flat")  <<  flat();
+        QTest::newRow("tree")  <<  four();
+    }
+
+    void testTreeModel()
+    {
+        const QFETCH(DetailModel::RowList, rows);
+
+        auto          model = TestTreeModel{};
+        const auto   tester = QAbstractItemModelTester{&model};
+        auto     modelReset = QSignalSpy{&model, &DetailModel::modelReset};
+        auto   rowsInserted = QSignalSpy{&model, &DetailModel::rowsInserted};
+
+        QCOMPARE(  modelReset.count(), 0);
+        QCOMPARE(rowsInserted.count(), 0);
+
+        model.addNodes(rows);
+
+        if (QTest::currentTestFailed())
+            return;
+
+        QCOMPARE(  modelReset.count(), 0);
+        QCOMPARE(rowsInserted.count(), flatten(rows).size());
+
+        compareTreeModel(model, {}, rows);
+    }
+
 private:
     void compareDetailModel(const DetailModel &model, const QModelIndex &parent,
                             const DetailModel::RowList &expectedRows)
@@ -239,10 +306,58 @@ private:
             }
         }
     }
+
+    void compareTreeModel(const TestTreeModel &model, const QModelIndex &parent,
+                          const QList<TestTreeModel::Data> &expectedRows)
+    {
+        using Data = TestTreeModel::Data;
+        using Role = TestTreeModel::Role;
+
+        const auto stringType = QMetaType::fromType<QString>();
+        const auto  valueType = QMetaType::fromType<Data>();
+        const auto      &path = makePath(parent);
+
+        const auto annotate = [path](const auto &value) {
+            return std::make_tuple(path, value);
+        };
+
+        QCOMPARE(annotate(model.   rowCount(parent)), annotate(expectedRows.size()));
+        QCOMPARE(annotate(model.columnCount(parent)), annotate(1));
+
+        for (auto row = 0; row < expectedRows.size(); ++row) {
+            const auto &index     = model.index(row, 0, parent);
+            const auto &display   = model.data(index, qToUnderlying(Role::Display));
+            const auto &value     = model.data(index, qToUnderlying(Role::Value));
+
+            const auto &expectedName  = expectedRows[row].name;
+            const auto &expectedValue = expectedRows[row];
+
+            QCOMPARE(annotate(index.isValid()),             annotate(true));
+
+            QCOMPARE(annotate(typeId(display)),             annotate(stringType.id()));
+            QCOMPARE(annotate(typeId(value)),               annotate(valueType.id()));
+
+            QCOMPARE(annotate(display),                     annotate(expectedName));
+            QCOMPARE(annotate(qvariant_cast<Data>(value)),  annotate(expectedValue));
+
+            if (expectedRows[row].hasChildren()) {
+                const auto actualChildren   = qvariant_cast<Data>(value).children();
+                const auto expectedChildren = expectedValue.children();
+
+                QCOMPARE(actualChildren, expectedChildren);
+
+                compareTreeModel(model, index, expectedChildren);
+
+                if (QTest::currentTestFailed())
+                    return;
+            }
+        }
+    }
 };
 
 } // namespace
-} // namespace qnc::mdns::tests
+} // namespace tests
+} // namespace qnc::mdns
 
 QTEST_GUILESS_MAIN(qnc::core::tests::CoreModelTest)
 
