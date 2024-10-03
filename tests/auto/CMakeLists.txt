@@ -29,6 +29,7 @@ qnc_add_library(
 
 target_link_libraries(QncTestSuport PUBLIC Qt::Test)
 
+add_testcase(tst_coremodels.cpp   LIBRARIES QncCore)
 add_testcase(tst_coreparse.cpp    LIBRARIES QncCore QncTestSuport)
 add_testcase(tst_httpparser.cpp   LIBRARIES QncHttp)
 add_testcase(tst_mdnsmessages.cpp LIBRARIES QncMdns)

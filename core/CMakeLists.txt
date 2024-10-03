@@ -4,6 +4,8 @@ qnc_add_library(
     abstractresolver.cpp
     abstractresolver.h
     compat.h
+    detailmodel.cpp
+    detailmodel.h
     literals.cpp
     literals.h
     multicastresolver.cpp
