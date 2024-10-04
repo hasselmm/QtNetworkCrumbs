@@ -146,6 +146,21 @@ int TreeModel::Node::index() const
     return 0;
 }
 
+TreeModel::Node *TreeModel::Node::addChild(Pointer child)
+{
+    const auto model = treeModel();
+    Q_ASSERT(model != nullptr);
+
+    const auto newRow = static_cast<int>(m_children.size());
+    model->beginInsertRows(model->indexForNode(this), newRow, newRow);
+
+    const auto childPointer = child.get();
+    m_children.emplace_back(std::move(child));
+
+    model->endInsertRows();
+    return childPointer;
+}
+
 TreeModel::Node *TreeModel::Node::findChild(const std::function<bool(const Pointer &)> &predicate) const
 {
     if (const auto it = std::find_if(m_children.cbegin(), m_children.cend(), predicate); it != m_children.cend())
