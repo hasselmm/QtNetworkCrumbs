@@ -55,9 +55,9 @@ jobs:
               '-DANDROID_NDK:PATH=$ANDROID_NDK_ROOT',
               '-DANDROID_STL:STRING=c++_shared',
               '-DANDROID_USE_LEGACY_TOOLCHAIN_FILE:BOOL=OFF',
-              '-DCMAKE_FIND_ROOT_PATH:PATH=$Qt6_DIR',
-              '-DCMAKE_PREFIX_PATH:STRING=$Qt6_DIR',
-              '-DQT_HOST_PATH=$Qt6_HOSTDIR',
+              '-DCMAKE_FIND_ROOT_PATH:PATH=$QT_ROOT_DIR',
+              '-DCMAKE_PREFIX_PATH:STRING=$QT_ROOT_DIR',
+              '-DQT_HOST_PATH=$QT_ROOT_DIR/../gcc_64',
               '-DQT_NO_GLOBAL_APK_TARGET_PART_OF_ALL:BOOL=ON',
               '-GNinja', '--toolchain', '$ANDROID_NDK_ROOT/build/cmake/android.toolchain.cmake',
             ]
@@ -69,32 +69,18 @@ jobs:
             os: macos-12
             target: ios
             cmake-flags: [
-              '-DCMAKE_FIND_ROOT_PATH:PATH=$Qt5_DIR$Qt6_DIR',
-              '-DCMAKE_PREFIX_PATH:STRING=$Qt5_DIR$Qt6_DIR',
+              '-DCMAKE_FIND_ROOT_PATH:PATH=$QT_ROOT_DIR',
+              '-DCMAKE_PREFIX_PATH:STRING=$QT_ROOT_DIR',
               '-DCMAKE_SYSTEM_NAME:STRING=iOS',
-              '-DQT_HOST_PATH=$Qt6_HOSTDIR',
+              '-DQT_HOST_PATH=$QT_ROOT_DIR/../macos',
               '-GXcode',
             ]
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install host Qt for cross-compiling
-        id: install-host-qt
-        uses: jurplel/install-qt-action@v3
-        if: (startsWith(matrix.qt-version, '6.')
-                && (matrix.configuration.target || 'desktop') != 'desktop')
-        with:
-          version: ${{matrix.qt-version}}
-          target: 'desktop'
-          cache: true
-
-      - name: Store location of host Qt
-        if: steps.install-host-qt.outcome == 'success'
-        run: echo "Qt6_HOSTDIR=${Qt6_DIR}" >> $GITHUB_ENV
-
       - name: Install Qt
-        uses: jurplel/install-qt-action@v3
+        uses: jurplel/install-qt-action@v4
         with:
           version: ${{matrix.qt-version}}
           target: ${{matrix.configuration.target || 'desktop'}}
