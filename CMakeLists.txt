@@ -48,7 +48,7 @@ elseif (QT_VERSION_MAJOR EQUAL 5)
     set(Qt_VERSION ${Qt5_VERSION})
     set(Qt_DIR ${Qt5_DIR})
 else()
-    message(FATAL_ERROR "Could not find Qt")
+    message(FATAL_ERROR "Could NOT find Qt")
     return()
 endif()
 
