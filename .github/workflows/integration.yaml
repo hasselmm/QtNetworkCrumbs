@@ -9,7 +9,7 @@ jobs:
       fail-fast: false
 
       matrix:
-        version:  ['5.15.2', '6.5.3']
+        version:  ['5.15.2', '6.5.3', '6.8.0']
         platform: ['android', 'linux', 'ios', 'macos', 'mingw', 'msvc']
 
         include:
@@ -57,6 +57,9 @@ jobs:
 
           - platform: msvc
             arch:     win64_msvc2019_64
+          - platform: msvc
+            version:  '6.8.0'
+            arch:     win64_msvc2022_64
 
         # ------------------------------------------------------------------------- select platform specific CMake flags
 
