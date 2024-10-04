@@ -8,6 +8,9 @@ This are some tiny networking toys for [Qt][qt-opensource] based applications, w
 * [A minimal SSDP resolver](#a-minimal-ssdp-resolver)
 * [A declarative XML parser](#a-declarative-xml-parser)
 
+This library is tested to work with [Qt][qt-opensource] 5.15, 6.5 and 6.8
+on Android, iOS, Linux, macOS and Windows.
+
 ### A minimal mDNS-SD resolver
 
 [DNS Service Discovery][DNS-SD], also known as "DNS-SD" and "Bonjour", is an efficient method to discover
