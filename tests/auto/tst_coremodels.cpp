@@ -98,6 +98,8 @@ public:
 
     QModelIndex addNode(const Data &data, const QModelIndex &parent = {});
     void addNodes(const QList<Data> &dataList, const QModelIndex &parent = {});
+    void reset(const QList<Data> &dataList);
+    void removeChildren(const QModelIndex &parent);
 };
 
 QModelIndex TestTreeModel::addNode(const Data &data, const QModelIndex &parent)
@@ -117,6 +119,22 @@ void TestTreeModel::addNodes(const QList<Data> &dataList, const QModelIndex &par
         if (data.hasChildren())
             addNodes(data.children(), index);
     }
+}
+
+void TestTreeModel::reset(const QList<Data> &dataList)
+{
+    beginResetModel();
+
+    root()->clear();
+    addNodes(dataList);
+
+    endResetModel();
+}
+
+void TestTreeModel::removeChildren(const QModelIndex &parent)
+{
+    if (const auto node = nodeForIndex(parent))
+        node->clear();
 }
 
 // ----------------------------------------------------------------------------------------------------------- utilities
@@ -222,23 +240,73 @@ private slots:
     {
         const QFETCH(DetailModel::RowList, rows);
 
-        auto          model = TestTreeModel{};
-        const auto   tester = QAbstractItemModelTester{&model};
-        auto     modelReset = QSignalSpy{&model, &DetailModel::modelReset};
-        auto   rowsInserted = QSignalSpy{&model, &DetailModel::rowsInserted};
+        auto        model = TestTreeModel{};
+        const auto tester = QAbstractItemModelTester{&model};
+        auto   modelReset = QSignalSpy{&model, &DetailModel::modelReset};
+        auto rowsInserted = QSignalSpy{&model, &DetailModel::rowsInserted};
+        auto  rowsRemoved = QSignalSpy{&model, &DetailModel::rowsRemoved};
 
-        QCOMPARE(  modelReset.count(), 0);
+        QCOMPARE(  modelReset.count(), 0); // ----------------------------------------------------- verify initial state
         QCOMPARE(rowsInserted.count(), 0);
+        QCOMPARE( rowsRemoved.count(), 0);
 
-        model.addNodes(rows);
+        compareTreeModel(model, {}, {});
+        QVERIFY(!QTest::currentTestFailed());
 
-        if (QTest::currentTestFailed())
-            return;
+        model.addNodes(rows); // ----------------------------------------------------------------------- test insertions
+        QVERIFY(!QTest::currentTestFailed());
 
-        QCOMPARE(  modelReset.count(), 0);
+        QCOMPARE(  modelReset.count(), 0); // -------------------------------------------- verify state after insertions
         QCOMPARE(rowsInserted.count(), flatten(rows).size());
+        QCOMPARE( rowsRemoved.count(), 0);
+
+        if (!rowsInserted.isEmpty()) {
+            QCOMPARE(rowsInserted[0][0], QModelIndex{});
+            QCOMPARE(rowsInserted[0][1],             0);
+            QCOMPARE(rowsInserted[0][2],             0);
+            rowsInserted.clear();
+        }
 
         compareTreeModel(model, {}, rows);
+        QVERIFY(!QTest::currentTestFailed());
+
+        model.reset({}); // --------------------------------------------------------------- test clearing by model reset
+        QVERIFY(!QTest::currentTestFailed());
+
+        QCOMPARE(  modelReset.count(), 1); // ---------------------------------------------- verify state after clearing
+        QCOMPARE(rowsInserted.count(), 0);
+        QCOMPARE( rowsRemoved.count(), 0);
+
+        modelReset.clear();
+
+        compareTreeModel(model, {}, {});
+        QVERIFY(!QTest::currentTestFailed());
+
+        model.reset(rows); // -------------------------------------------------------------- test filling by model reset
+        QVERIFY(!QTest::currentTestFailed());
+
+        QCOMPARE(  modelReset.count(), 1); // ----------------------------------------------- verify state after filling
+        QCOMPARE(rowsInserted.count(), 0);
+        QCOMPARE( rowsRemoved.count(), 0);
+
+        modelReset.clear();
+
+        compareTreeModel(model, {}, rows);
+        QVERIFY(!QTest::currentTestFailed());
+
+        model.removeChildren({}); // --------------------------------------------------------- test clearing by removing
+        QVERIFY(!QTest::currentTestFailed());
+
+        QCOMPARE(  modelReset.count(), 0); // ---------------------------------------------- verify state after clearing
+        QCOMPARE(rowsInserted.count(), 0);
+        QCOMPARE( rowsRemoved.count(), rows.isEmpty() ? 0 : 1);
+
+        if (!rowsRemoved.isEmpty()) {
+            QCOMPARE(rowsRemoved[0][0],   QModelIndex{});
+            QCOMPARE(rowsRemoved[0][1],               0);
+            QCOMPARE(rowsRemoved[0][2], rows.size() - 1);
+            rowsRemoved.clear();
+        }
     }
 
 private:
