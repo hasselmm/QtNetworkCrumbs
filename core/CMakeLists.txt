@@ -1,6 +1,5 @@
 qnc_add_library(
     QncCore STATIC
-
     abstractresolver.cpp
     abstractresolver.h
     compat.h
