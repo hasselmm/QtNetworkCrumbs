@@ -6,21 +6,6 @@ else()
     unset(TEST_RUNNER)
 endif()
 
-function(add_testcase SOURCE_FILENAME) # [SOURCES...]
-    cmake_parse_arguments(TESTCASE "" "NAME" "LIBRARIES;SOURCES" ${ARGN})
-
-    if (NOT TESTCASE_NAME)
-        cmake_path(GET SOURCE_FILENAME STEM TESTCASE_NAME)
-    endif()
-
-    list(PREPEND TESTCASE_SOURCES "${SOURCE_FILENAME}")
-    list(APPEND  TESTCASE_SOURCES ${TESTCASE_UNPARSED_ARGUMENTS})
-
-    qnc_add_executable("${TESTCASE_NAME}" TYPE "unit-test" ${TESTCASE_SOURCES})
-    target_link_libraries("${TESTCASE_NAME}" PRIVATE Qt::Test ${TESTCASE_LIBRARIES})
-    add_test(NAME "${TESTCASE_NAME}" COMMAND ${TEST_RUNNER} "$<TARGET_FILE:${TESTCASE_NAME}>")
-endfunction()
-
 qnc_add_library(
     QncTestSuport STATIC
     qnctestsupport.cpp

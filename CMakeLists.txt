@@ -2,6 +2,9 @@ cmake_minimum_required(VERSION 3.10)
 project(QtNetworkCrumbs)
 enable_testing()
 
+list(PREPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+include(QncMacros)
+
 set(CMAKE_CXX_STANDARD 17) # ------------------------------------------------------------------- setup compiler behavior
 enable_language(CXX)
 
@@ -68,37 +71,6 @@ else()
         add_library(QtNetworkCrumbs::Zlib ALIAS ZLIB::ZLIB)
     endif()
 endif()
-
-function(qnc_add_library NAME)
-    if (COMMAND qt_add_executable)
-        qt_add_library("${NAME}" ${ARGN})
-    else()
-        add_library("${NAME}" ${ARGN})
-    endif()
-
-    target_include_directories("${NAME}" PUBLIC  ${CMAKE_CURRENT_SOURCE_DIR})
-    target_compile_definitions("${NAME}" PRIVATE ${QNC_COMPILE_DEFINITIONS})
-    target_compile_options    ("${NAME}" PRIVATE ${QNC_COMPILE_OPTIONS})
-endfunction()
-
-function(qnc_add_executable NAME)
-    cmake_parse_arguments(EXECUTABLE "" "TYPE" "" ${ARGN})
-
-    if (COMMAND qt_add_executable)
-        qt_add_executable("${NAME}" ${EXECUTABLE_UNPARSED_ARGUMENTS})
-    else()
-        add_executable("${NAME}" ${EXECUTABLE_UNPARSED_ARGUMENTS})
-    endif()
-
-    target_compile_definitions("${NAME}" PRIVATE ${QNC_COMPILE_DEFINITIONS})
-    target_compile_options    ("${NAME}" PRIVATE ${QNC_COMPILE_OPTIONS})
-
-    set_target_properties(
-        "${NAME}" PROPERTIES
-        MACOSX_BUNDLE "de.taschenorakel.qnc.${NAME}"
-        XCODE_PRODUCT_TYPE "com.apple.product-type.bundle.${EXECUTABLE_TYPE}"
-    )
-endfunction()
 
 add_custom_target(metadata SOURCES LICENSE README.md) # ------------------------------ define custom targets and subdirs
 
