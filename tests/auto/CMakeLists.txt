@@ -8,16 +8,18 @@ endif()
 
 qnc_add_library(
     QncTestSuport STATIC
+    ALIAS Qnc::TestSuport
+
     qnctestsupport.cpp
     qnctestsupport.h
 )
 
 target_link_libraries(QncTestSuport PUBLIC Qt::Test)
 
-add_testcase(tst_coremodels.cpp   LIBRARIES QncCore)
-add_testcase(tst_coreparse.cpp    LIBRARIES QncCore QncTestSuport)
-add_testcase(tst_httpparser.cpp   LIBRARIES QncHttp)
-add_testcase(tst_mdnsmessages.cpp LIBRARIES QncMdns)
-add_testcase(tst_mdnsresolver.cpp LIBRARIES QncMdns)
-add_testcase(tst_ssdpresolver.cpp LIBRARIES QncSsdp)
-add_testcase(tst_xmlparser.cpp    LIBRARIES QncXml QncTestSuport)
+add_testcase(tst_coremodels.cpp   LIBRARIES Qnc::Core)
+add_testcase(tst_coreparse.cpp    LIBRARIES Qnc::Core Qnc::TestSuport)
+add_testcase(tst_httpparser.cpp   LIBRARIES Qnc::Http)
+add_testcase(tst_mdnsmessages.cpp LIBRARIES Qnc::Mdns)
+add_testcase(tst_mdnsresolver.cpp LIBRARIES Qnc::Mdns)
+add_testcase(tst_ssdpresolver.cpp LIBRARIES Qnc::Ssdp)
+add_testcase(tst_xmlparser.cpp    LIBRARIES Qnc::Xml Qnc::TestSuport)

@@ -1,5 +1,7 @@
 qnc_add_library(
     QncCore STATIC
+    ALIAS Qnc::Core
+
     abstractresolver.cpp
     abstractresolver.h
     compat.h
