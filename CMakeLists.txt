@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.10)
 project(QtNetworkCrumbs)
 enable_testing()
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 17) # ------------------------------------------------------------------- setup compiler behavior
 enable_language(CXX)
 
 if (CMAKE_CXX_COMPILER_ID MATCHES GNU|Clang)
@@ -30,7 +30,7 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
 
-if (NOT QT_DIR)
+if (NOT QT_DIR) # -------------------------------------------------------------------------------- find the Qt framework
     find_package(Qt6 QUIET COMPONENTS Core)
     set(QT_DIR "${Qt6_DIR}")
 endif()
@@ -54,7 +54,7 @@ endif()
 
 message(STATUS "Using Qt ${Qt_VERSION} from ${Qt_DIR}")
 
-if (TARGET Qt::ZlibPrivate AND NOT ANDROID)
+if (TARGET Qt::ZlibPrivate AND NOT ANDROID) # ----------------------------- figure out today's name of Qt's bundled zlib
     # Qt::ZlibPrivate only provides headers, but no linkable symbols for Android
     message(STATUS "Using Qt::ZlibPrivate")
     add_library(QtNetworkCrumbs::Zlib ALIAS Qt::ZlibPrivate)
@@ -100,7 +100,7 @@ function(qnc_add_executable NAME)
     )
 endfunction()
 
-add_custom_target(metadata SOURCES LICENSE README.md)
+add_custom_target(metadata SOURCES LICENSE README.md) # ------------------------------ define custom targets and subdirs
 
 add_subdirectory(.github)
 add_subdirectory(core)
