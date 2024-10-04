@@ -52,7 +52,14 @@ protected:
 #endif
 
 private:
+    enum class Flag {
+        CurrentlyResetting = 1 << 0,
+    };
+
+    Q_DECLARE_FLAGS(Flags, Flag);
+
     RootNode *const m_root;
+    Flags           m_flags;
 };
 
 class TreeModel::Node // ------------------------------------------------------------------------------- TreeModel::Node

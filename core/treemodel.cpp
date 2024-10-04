@@ -7,7 +7,15 @@ namespace qnc::core {
 TreeModel::TreeModel(QObject *parent)
     : QAbstractItemModel{parent}
     , m_root{new RootNode{this}}
-{}
+{
+    connect(this, &TreeModel::modelAboutToBeReset, this, [this] {
+        m_flags.setFlag(Flag::CurrentlyResetting, true);
+    });
+
+    connect(this, &TreeModel::modelReset, this, [this] {
+        m_flags.setFlag(Flag::CurrentlyResetting, false);
+    });
+}
 
 QModelIndex TreeModel::index(int row, int column, const QModelIndex &parent) const
 {
@@ -152,12 +160,16 @@ TreeModel::Node *TreeModel::Node::addChild(Pointer child)
     Q_ASSERT(model != nullptr);
 
     const auto newRow = static_cast<int>(m_children.size());
-    model->beginInsertRows(model->indexForNode(this), newRow, newRow);
+
+    if (!model->m_flags.testFlag(Flag::CurrentlyResetting))
+        model->beginInsertRows(model->indexForNode(this), newRow, newRow);
 
     const auto childPointer = child.get();
     m_children.emplace_back(std::move(child));
 
-    model->endInsertRows();
+    if (!model->m_flags.testFlag(Flag::CurrentlyResetting))
+        model->endInsertRows();
+
     return childPointer;
 }
 
