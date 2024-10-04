@@ -154,6 +154,25 @@ int TreeModel::Node::index() const
     return 0;
 }
 
+void TreeModel::Node::clear()
+{
+    if (m_children.empty())
+        return;
+
+    const auto model = treeModel();
+    Q_ASSERT(model != nullptr);
+
+    const auto lastRow = static_cast<int>(m_children.size()) - 1;
+
+    if (!model->m_flags.testFlag(Flag::CurrentlyResetting))
+        model->beginRemoveRows(model->indexForNode(this), 0, lastRow);
+
+    m_children.clear();
+
+    if (!model->m_flags.testFlag(Flag::CurrentlyResetting))
+        model->endRemoveRows();
+}
+
 TreeModel::Node *TreeModel::Node::addChild(Pointer child)
 {
     const auto model = treeModel();

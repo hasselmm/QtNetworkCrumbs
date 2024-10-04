@@ -98,6 +98,8 @@ public:
     template<class NodeType, auto IdField, class ContainerType>
     void updateOrAddChildren(const ContainerType &container);
 
+    void clear();
+
 protected:
     template<class NodeType>
     const NodeType *parent() const { return dynamic_cast<const NodeType *>(m_parent); }
