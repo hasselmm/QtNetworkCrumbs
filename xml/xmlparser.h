@@ -221,11 +221,17 @@ protected:
     static void emplaceBack(Context &context, typename detail::ValueType<list>::value_type &&value)
     {
         using Object = typename detail::ObjectType<list>;
+
+        QT_WARNING_PUSH
+        QT_WARNING_DISABLE_GCC("-Wmaybe-uninitialized")
+
 #if QT_VERSION_MAJOR >= 6
         (currentObject<Object>(context).*list).emplaceBack(std::move(value));
 #else // QT_VERSION_MAJOR < 6
         (currentObject<Object>(context).*list).append(std::move(value));
 #endif // QT_VERSION_MAJOR < 6
+
+        QT_WARNING_POP
     }
 
     static QString stateName(const QMetaEnum &metaEnum, int value);
@@ -306,6 +312,9 @@ private:
 
     QXmlStreamReader *const m_xml;
 };
+
+template <> // QStringView is not a storage type, it's a temporary view
+void ParserBase::parseValue(QStringView text, const std::function<void(QStringView)> &store) = delete;
 
 template <typename StateEnum>
 class Parser : public ParserBase

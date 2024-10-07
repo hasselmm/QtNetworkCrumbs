@@ -11,6 +11,7 @@
 #include <QBuffer>
 #include <QDateTime>
 #include <QLoggingCategory>
+#include <QTimeZone>
 
 namespace qnc::http {
 
@@ -170,14 +171,14 @@ QDateTime parseDateTime(const QString &text)
     const auto locale = QLocale::c(); // for language neutral (that is English) weekdays
 
     if (auto dt = locale.toDateTime(text, s_rfc1123DateFormat); dt.isValid()) {
-        dt.setTimeSpec(Qt::UTC);
+        dt.setTimeZone(QTimeZone::utc());
         return dt;
     } else if (auto dt = locale.toDateTime(text, s_rfc850DateFormat); dt.isValid()) {
-        dt.setTimeSpec(Qt::UTC);
+        dt.setTimeZone(QTimeZone::utc());
         return dt;
     } else if (auto dt = locale.toDateTime(QString{text}.replace("  "_L1, " "_L1),
                                            s_ascTimeDateFormat); dt.isValid()) {
-        dt.setTimeSpec(Qt::UTC);
+        dt.setTimeZone(QTimeZone::utc());
         return dt;
     }
 

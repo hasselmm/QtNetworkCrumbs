@@ -93,11 +93,8 @@ std::optional<QString> convert(QStringView text)
     return text.toString();
 }
 
-template <>
-std::optional<QStringView> convert(QStringView text)
-{
-    return text;
-}
+template <> // QStringView is a temporary view, not a storage type
+std::optional<QStringView> convert(QStringView text) = delete;
 
 template <>
 std::optional<QUrl> convert(QStringView text)
@@ -179,7 +176,6 @@ template void ParserBase::parseValue(QStringView, const std::function<void(float
 template void ParserBase::parseValue(QStringView, const std::function<void(double)> &);
 template void ParserBase::parseValue(QStringView, const std::function<void(long double)> &);
 template void ParserBase::parseValue(QStringView, const std::function<void(QString)> &);
-template void ParserBase::parseValue(QStringView, const std::function<void(QStringView)> &);
 template void ParserBase::parseValue(QStringView, const std::function<void(QUrl)> &);
 
 QString ParserBase::stateName(const QMetaEnum &metaEnum, int value)
