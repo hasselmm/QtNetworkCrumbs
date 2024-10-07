@@ -1,5 +1,7 @@
 qnc_add_library(
     QncMdns STATIC
+    ALIAS Qnc::Mdns
+
     mdnsmessage.cpp
     mdnsmessage.h
     mdnsresolver.cpp
@@ -8,12 +10,12 @@ qnc_add_library(
     mdnsurlfinder.h
 )
 
-target_link_libraries(QncMdns PUBLIC QncCore)
+target_link_libraries(QncMdns PUBLIC Qnc::Core)
 
 
 if (NOT IOS) # FIXME Figure out code signing on Github
     qnc_add_executable(MDNSResolverDemo TYPE tool mdnsresolverdemo.cpp)
-    target_link_libraries(MDNSResolverDemo PRIVATE QncMdns)
+    target_link_libraries(MDNSResolverDemo PRIVATE Qnc::Mdns)
 endif()
 
 #if (WIN32)
