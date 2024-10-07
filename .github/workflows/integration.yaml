@@ -3,78 +3,112 @@ on: [push]
 
 jobs:
   build:
-    runs-on: ${{matrix.configuration.os}}
+    runs-on: ${{matrix.runner || 'ubuntu-latest' }}
 
     strategy:
       fail-fast: false
 
       matrix:
-        qt-version: ['5.15.2', '6.5.3']
-        configuration:
-          - id: windows-msvc
-            os: windows-2022
+        version:  ['5.15.2', '6.5.3']
+        platform: ['android', 'linux', 'ios', 'macos', 'mingw', 'msvc']
 
-          - id: windows-mingw
-            os: windows-2022
-            arch-qt5: win64_mingw81
-            arch-qt6: win64_mingw
+        include:
+
+        # ----------------------------------------------------------------------- select platform specific Github runner
+
+          - platform: android
+            runner:   ubuntu-latest
+          - platform: linux
+            runner:   ubuntu-latest
+
+          - platform: ios
+            runner:   macos-latest
+          - platform: macos
+            runner:   macos-latest
+
+          - platform: mingw
+            runner:   windows-latest
+          - platform: msvc
+            runner:   windows-latest
+
+        # --------------------------------------------------------------------------- select platform specific Qt target
+
+          - platform: android
+            target:   android
+          - platform: ios
+            target:   ios
+
+        # --------------------------------------------------------------------- select platform specific Qt architecture
+
+          - platform: android
+            arch:     android_arm64_v8a
+          - platform: android
+            version:  '5.15.2'
+            arch:     android
+
+          - platform: ios
+            arch:     ios
+
+          - platform: mingw
+            arch:     win64_mingw
+          - platform: mingw
+            version:  '5.15.2'
+            arch:     win64_mingw81
+
+          - platform: msvc
+            arch:     win64_msvc2019_64
+
+        # ------------------------------------------------------------------------- select platform specific CMake flags
+
+          - platform: android
             cmake-flags: [
-              '-DCMAKE_C_COMPILER:FILEPATH=$env:IQTA_TOOLS/mingw1120_64/bin/gcc.exe',
-              '-DCMAKE_CXX_COMPILER:FILEPATH=$env:IQTA_TOOLS/mingw1120_64/bin/g++.exe',
-              '-DCMAKE_MAKE_PROGRAM:FILEPATH=$env:IQTA_TOOLS/Ninja/ninja.exe',
-              '-GNinja',
-            ]
-            tools: 'tools_mingw90 tools_ninja'
-
-          - id: linux
-            os: ubuntu-22.04
-            cmake-flags: [
-              '-GNinja',
-            ]
-
-          - id: android
-            os: ubuntu-22.04
-            target: android
-            arch-qt5: android
-            arch-qt6: android_arm64_v8a
-            cmake-flags-qt5: [
-              '-DANDROID_ABI:STRING=armeabi-v7a',
-              '-DANDROID_NDK:PATH=$ANDROID_NDK_ROOT',
-              '-DANDROID_SDK:PATH=$ANDROID_SDK_ROOT',
-              '-DANDROID_PLATFORM:STRING=android-21',
-              '-DANDROID_STL:STRING=c++_shared',
-              '-DANDROID_USE_LEGACY_TOOLCHAIN_FILE:BOOL=OFF',
-              '-DCMAKE_FIND_ROOT_PATH:PATH=$Qt5_DIR',
-              '-DCMAKE_PREFIX_PATH:STRING=$Qt5_DIR',
-              '-GNinja', '--toolchain', '$ANDROID_NDK_ROOT/build/cmake/android.toolchain.cmake',
-            ]
-            cmake-flags-qt6: [
               '-DANDROID_ABI:STRING=arm64-v8a',
               '-DANDROID_PLATFORM:STRING=android-23',
               '-DANDROID_SDK_ROOT:PATH=$ANDROID_SDK_ROOT',
               '-DANDROID_NDK:PATH=$ANDROID_NDK_ROOT',
               '-DANDROID_STL:STRING=c++_shared',
               '-DANDROID_USE_LEGACY_TOOLCHAIN_FILE:BOOL=OFF',
-              '-DCMAKE_FIND_ROOT_PATH:PATH=$QT_ROOT_DIR',
-              '-DCMAKE_PREFIX_PATH:STRING=$QT_ROOT_DIR',
-              '-DQT_HOST_PATH=$QT_ROOT_DIR/../gcc_64',
+              '-DQT_HOST_PATH:PATH=$QT_ROOT_DIR/../gcc_64',
               '-DQT_NO_GLOBAL_APK_TARGET_PART_OF_ALL:BOOL=ON',
               '-GNinja', '--toolchain', '$ANDROID_NDK_ROOT/build/cmake/android.toolchain.cmake',
             ]
 
-          - id: macos
-            os: macos-12
-
-          - id: ios
-            os: macos-12
-            target: ios
+          - platform: ios
             cmake-flags: [
-              '-DCMAKE_FIND_ROOT_PATH:PATH=$QT_ROOT_DIR',
-              '-DCMAKE_PREFIX_PATH:STRING=$QT_ROOT_DIR',
               '-DCMAKE_SYSTEM_NAME:STRING=iOS',
-              '-DQT_HOST_PATH=$QT_ROOT_DIR/../macos',
+              '-DQT_HOST_PATH:PATH=$QT_ROOT_DIR/../macos',
               '-GXcode',
             ]
+
+          - platform: macos
+            version:  '5.15.2'
+            cmake-flags: [
+              '-DCMAKE_OSX_ARCHITECTURES=x86_64',
+            ]
+
+          - platform: linux
+            cmake-flags: [
+              '-GNinja'
+            ]
+
+          - platform: mingw
+            cmake-flags: [
+              '-DCMAKE_C_COMPILER:FILEPATH=$env:IQTA_TOOLS/mingw1310_64/bin/gcc.exe',
+              '-DCMAKE_CXX_COMPILER:FILEPATH=$env:IQTA_TOOLS/mingw1310_64/bin/g++.exe',
+              '-DCMAKE_MAKE_PROGRAM:FILEPATH=$env:IQTA_TOOLS/Ninja/ninja.exe',
+              '-GNinja',
+            ]
+
+        # ------------------------------------------------------------------------- select platform specific CMake tools
+
+          - platform: mingw
+            tools: 'tools_mingw1310 tools_ninja'
+
+        # ------------------------------------------------------------------------ select platform specific package name
+
+          - package:  Qt6
+          - version:  '5.15.2'
+            package:  Qt5
 
     steps:
       - uses: actions/checkout@v4
@@ -82,18 +116,14 @@ jobs:
       - name: Install Qt
         uses: jurplel/install-qt-action@v4
         with:
-          version: ${{matrix.qt-version}}
-          target: ${{matrix.configuration.target || 'desktop'}}
-          arch: ${{startsWith(matrix.qt-version, '5.')
-                        && matrix.configuration.arch-qt5
-                        || matrix.configuration.arch-qt6
-                        || matrix.configuration.arch
-                        || ''}}
-          tools: ${{matrix.configuration.tools || ''}}
-          cache: true
+          version: ${{ matrix.version             }}
+          target:  ${{ matrix.target || 'desktop' }}
+          tools:   ${{ matrix.tools  || ''        }}
+          arch:    ${{ matrix.arch                }}
+          cache:   true
 
       - name: Install Ninja
-        if: matrix.configuration.os == 'ubuntu-22.04'
+        if: startsWith(matrix.runner, 'ubuntu-')
         run: |
           sudo apt-get install ninja-build
 
@@ -104,16 +134,14 @@ jobs:
       - name: Configure
         working-directory: ${{runner.workspace}}/build
         run: cmake ${{github.workspace}}
-            -DCMAKE_BUILD_TYPE:STRING=Release
-            ${{join(startsWith(matrix.qt-version, '5.')
-                        && matrix.configuration.cmake-flags-qt5
-                        || matrix.configuration.cmake-flags-qt6
-                        || matrix.configuration.cmake-flags,
-                    ' ')}}
+                -DCMAKE_BUILD_TYPE:STRING=Release
+                -DQT_DIR:PATH=$QT_ROOT_DIR/lib/cmake/${{matrix.package}}
+                -DCMAKE_FIND_ROOT_PATH:PATH=$QT_ROOT_DIR
+                ${{ join(matrix.cmake-flags, ' ') }}
 
       - uses: actions/upload-artifact@v4
         with:
-          name: cmake-qt${{matrix.qt-version}}-${{matrix.configuration.id}}
+          name: cmake-qt${{matrix.version}}-${{matrix.platform}}
           path: |
             ${{runner.workspace}}/build/CMakeCache.txt
             ${{runner.workspace}}/build/CMakeFiles/CMakeOutput.log
@@ -123,14 +151,14 @@ jobs:
         run: cmake --build . --config Release
 
       - name: Test
-        if: (matrix.configuration.target || 'desktop') == 'desktop'
+        if: (matrix.target || 'desktop') == 'desktop'
         working-directory: ${{runner.workspace}}/build
         run: |
           ctest -C Release --verbose
 
       - uses: actions/upload-artifact@v4
-        if: (matrix.configuration.target || 'desktop') == 'desktop'
+        if: (matrix.target || 'desktop') == 'desktop'
         with:
-          name: ctest-qt${{matrix.qt-version}}-${{matrix.configuration.id}}
+          name: ctest-qt${{matrix.version}}-${{matrix.platform}}
           path: |
             ${{runner.workspace}}/build/Testing/Temporary/LastTest.log
