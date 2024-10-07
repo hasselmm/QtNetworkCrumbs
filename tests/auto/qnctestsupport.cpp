@@ -59,7 +59,7 @@ bool initialize()
     return compare_helper(success, "Compared numbers are not the same",
                           toString(t1), toString(t2), actual, expected, file, line);
 
-#else // QT_VERSION_MAJOR >= 6
+#elif QT_VERSION < QT_VERSION_CHECK(6, 8, 0)
 
     return reportResult(success,
                         [t1] { return toString(t1); },
@@ -67,7 +67,14 @@ bool initialize()
                         actual, expected, ComparisonOperation::Equal,
                         file, line);
 
-#endif // QT_VERSION_MAJOR >= 6
+#else // QT_VERSION >= 6.8
+
+    const auto toString = &Internal::genericToString<long double>;
+
+    return reportResult(success, std::addressof(t1), std::addressof(t2), toString, toString,
+                        actual, expected, ComparisonOperation::Equal,  file, line);
+
+#endif // QT_VERSION >= 6.8
 }
 
 QDebug operator<<(QDebug debug, long double value)

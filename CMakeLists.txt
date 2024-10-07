@@ -69,18 +69,21 @@ endif()
 
 message(STATUS "Using Qt ${Qt_VERSION} from ${Qt_DIR}")
 
-if (TARGET Qt::ZlibPrivate AND NOT ANDROID) # ----------------------------- figure out today's name of Qt's bundled zlib
+add_library(QncZlib INTERFACE) # ------------------------------------------ figure out today's name of Qt's bundled zlib
+add_library(Qnc::Zlib ALIAS QncZlib)
+
+if (TARGET Qt::ZlibPrivate AND NOT ANDROID)
     # Qt::ZlibPrivate only provides headers, but no linkable symbols for Android
     message(STATUS "Using Qt::ZlibPrivate")
-    add_library(QtNetworkCrumbs::Zlib ALIAS Qt::ZlibPrivate)
+    target_link_libraries(QncZlib INTERFACE Qt::ZlibPrivate)
 else()
     find_package(WrapZLIB QUIET)
 
     if (WrapZLIB_FOUND)
-        add_library(QtNetworkCrumbs::Zlib ALIAS WrapZLIB::WrapZLIB)
+        target_link_libraries(QncZlib INTERFACE WrapZLIB::WrapZLIB)
     else()
         find_package(ZLIB REQUIRED)
-        add_library(QtNetworkCrumbs::Zlib ALIAS ZLIB::ZLIB)
+        target_link_libraries(QncZlib INTERFACE ZLIB::ZLIB)
     endif()
 endif()
 
