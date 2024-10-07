@@ -331,7 +331,6 @@ private slots:
         QTest::newRow("double:valid")      << makeConversionTest<double>            (u"4.56",  4.56);
         QTest::newRow("longdouble:valid")  << makeConversionTest<long double>       (u"7.89",  7.89);
         QTest::newRow("QString:valid")     << makeConversionTest<QString>    (u"Hello world", u"Hello world"_s);
-        QTest::newRow("QStringView:valid") << makeConversionTest<QStringView>(u"Hello world", u"Hello world");
         QTest::newRow("QUrl:valid")        << makeConversionTest<QUrl>       (u"hello:world",  "hello:world"_url);
     }
 

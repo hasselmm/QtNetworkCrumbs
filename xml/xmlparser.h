@@ -313,6 +313,9 @@ private:
     QXmlStreamReader *const m_xml;
 };
 
+template <> // QStringView is not a storage type, it's a temporary view
+void ParserBase::parseValue(QStringView text, const std::function<void(QStringView)> &store) = delete;
+
 template <typename StateEnum>
 class Parser : public ParserBase
 {
