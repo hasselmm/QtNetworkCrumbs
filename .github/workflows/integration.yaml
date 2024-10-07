@@ -10,7 +10,7 @@ jobs:
 
       matrix:
         version:  ['5.15.2', '6.5.3', '6.8.0']
-        platform: ['android', 'linux', 'ios', 'macos', 'mingw', 'msvc']
+        platform: ['android', 'linux', 'ios', 'macos', 'mingw-gcc', 'mingw-llvm', 'msvc']
 
         include:
 
@@ -26,7 +26,9 @@ jobs:
           - platform: macos
             runner:   macos-latest
 
-          - platform: mingw
+          - platform: mingw-llvm
+            runner:   windows-latest
+          - platform: mingw-gcc
             runner:   windows-latest
           - platform: msvc
             runner:   windows-latest
@@ -49,11 +51,14 @@ jobs:
           - platform: ios
             arch:     ios
 
-          - platform: mingw
+          - platform: mingw-gcc
             arch:     win64_mingw
-          - platform: mingw
+          - platform: mingw-gcc
             version:  '5.15.2'
             arch:     win64_mingw81
+
+          - platform: mingw-llvm
+            arch:     win64_llvm_mingw
 
           - platform: msvc
             arch:     win64_msvc2019_64
@@ -94,7 +99,7 @@ jobs:
               '-GNinja'
             ]
 
-          - platform: mingw
+          - platform: mingw-gcc
             cmake-flags: [
               '-DCMAKE_C_COMPILER:FILEPATH=$env:IQTA_TOOLS/mingw1310_64/bin/gcc.exe',
               '-DCMAKE_CXX_COMPILER:FILEPATH=$env:IQTA_TOOLS/mingw1310_64/bin/g++.exe',
@@ -102,16 +107,34 @@ jobs:
               '-GNinja',
             ]
 
+          - platform: mingw-llvm
+            cmake-flags: [
+              '-DCMAKE_C_COMPILER:STRING=$env:IQTA_TOOLS/llvm_mingw1706_64/bin/clang.exe',
+              '-DCMAKE_CXX_COMPILER:STRING=$env:IQTA_TOOLS/llvm_mingw1706_64/bin/clang++.exe',
+              '-DCMAKE_MAKE_PROGRAM:FILEPATH=$env:IQTA_TOOLS/Ninja/ninja.exe',
+              '-GNinja',
+            ]
+
         # ------------------------------------------------------------------------- select platform specific CMake tools
 
-          - platform: mingw
+          - platform: mingw-gcc
             tools: 'tools_mingw1310 tools_ninja'
+          - platform: mingw-llvm
+            tools: 'tools_llvm_mingw1706 tools_ninja'
 
         # ------------------------------------------------------------------------ select platform specific package name
 
           - package:  Qt6
           - version:  '5.15.2'
             package:  Qt5
+
+        # --------------------------------------------------------------------------- exclude unsupported configurations
+
+        exclude:
+          - platform: mingw-llvm
+            version:  '5.15.2'
+          - platform: mingw-llvm
+            version:  '6.5.3'
 
     steps:
       - uses: actions/checkout@v4
