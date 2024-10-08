@@ -52,7 +52,14 @@ protected:
 #endif
 
 private:
+    enum class Flag {
+        CurrentlyResetting = 1 << 0,
+    };
+
+    Q_DECLARE_FLAGS(Flags, Flag);
+
     RootNode *const m_root;
+    Flags           m_flags;
 };
 
 class TreeModel::Node // ------------------------------------------------------------------------------- TreeModel::Node
@@ -91,11 +98,15 @@ public:
     template<class NodeType, auto IdField, class ContainerType>
     void updateOrAddChildren(const ContainerType &container);
 
+    void clear();
+
 protected:
     template<class NodeType>
     const NodeType *parent() const { return dynamic_cast<const NodeType *>(m_parent); }
 
 private:
+    Node *addChild(Pointer child);
+
     const Node *const    m_parent;
     std::vector<Pointer> m_children = {};
 };
@@ -157,18 +168,8 @@ inline void core::TreeModel::ValueNode<ValueType, BaseType>::update(const ValueT
 template<class NodeType, typename ...Args>
 inline NodeType *TreeModel::Node::addChild(Args &&...args)
 {
-    const auto model = treeModel();
-    Q_ASSERT(model != nullptr);
-
-    const auto newRow = static_cast<int>(m_children.size());
-    model->beginInsertRows(model->indexForNode(this), newRow, newRow);
-
     auto node = std::make_unique<NodeType>(std::forward<Args>(args)..., this);
-    const auto nodePointer = node.get();
-    m_children.emplace_back(std::move(node));
-
-    model->endInsertRows();
-    return nodePointer;
+    return static_cast<NodeType *>(addChild(std::move(node)));
 }
 
 template<class NodeType, typename ...Args>

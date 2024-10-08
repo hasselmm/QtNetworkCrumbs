@@ -7,7 +7,15 @@ namespace qnc::core {
 TreeModel::TreeModel(QObject *parent)
     : QAbstractItemModel{parent}
     , m_root{new RootNode{this}}
-{}
+{
+    connect(this, &TreeModel::modelAboutToBeReset, this, [this] {
+        m_flags.setFlag(Flag::CurrentlyResetting, true);
+    });
+
+    connect(this, &TreeModel::modelReset, this, [this] {
+        m_flags.setFlag(Flag::CurrentlyResetting, false);
+    });
+}
 
 QModelIndex TreeModel::index(int row, int column, const QModelIndex &parent) const
 {
@@ -144,6 +152,44 @@ int TreeModel::Node::index() const
     }
 
     return 0;
+}
+
+void TreeModel::Node::clear()
+{
+    if (m_children.empty())
+        return;
+
+    const auto model = treeModel();
+    Q_ASSERT(model != nullptr);
+
+    const auto lastRow = static_cast<int>(m_children.size()) - 1;
+
+    if (!model->m_flags.testFlag(Flag::CurrentlyResetting))
+        model->beginRemoveRows(model->indexForNode(this), 0, lastRow);
+
+    m_children.clear();
+
+    if (!model->m_flags.testFlag(Flag::CurrentlyResetting))
+        model->endRemoveRows();
+}
+
+TreeModel::Node *TreeModel::Node::addChild(Pointer child)
+{
+    const auto model = treeModel();
+    Q_ASSERT(model != nullptr);
+
+    const auto newRow = static_cast<int>(m_children.size());
+
+    if (!model->m_flags.testFlag(Flag::CurrentlyResetting))
+        model->beginInsertRows(model->indexForNode(this), newRow, newRow);
+
+    const auto childPointer = child.get();
+    m_children.emplace_back(std::move(child));
+
+    if (!model->m_flags.testFlag(Flag::CurrentlyResetting))
+        model->endInsertRows();
+
+    return childPointer;
 }
 
 TreeModel::Node *TreeModel::Node::findChild(const std::function<bool(const Pointer &)> &predicate) const
